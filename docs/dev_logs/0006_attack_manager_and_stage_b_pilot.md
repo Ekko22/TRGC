@@ -43,7 +43,7 @@ Payloads are short, non-executable, and do not contain shell command strings.
 
 ## SingleRun Integration
 
-`SingleRunExecutor` accepts an optional `AttackManager`. Message events now record whether an attack was injected, the attack type, and changed fields. Results include `attacked_messages`.
+`SingleRunExecutor` accepts an optional `AttackManager`. It builds preliminary route metadata, calls `AttackManager.apply_attack_if_needed(...)` after message generation and before `MessageRouter.route(...)`, and passes the attacked or original message into the router. Message events record whether an attack was injected, the attack type, changed fields, and route metadata including step and exposure fields. Results include `attacked_messages`.
 
 ## Stage-B Pilot Runner
 
@@ -61,7 +61,7 @@ Smoke results:
 ## Tests
 
 - Command: `conda run -n lmas-trgc python -m pytest -q`
-- Status: passed, `94 passed in 3.23s`.
+- Status: superseded by Step 6 repair validation in `0007_step6_attack_integration_fix.md`.
 
 ## Git Commit
 

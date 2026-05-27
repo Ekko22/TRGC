@@ -111,6 +111,8 @@ conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology tree --def
 
 Step 6 adds a communication-layer attack manager. Attacks are not agents, do not enter topology or protocol, and do not change the true transport sender recorded by the router. They occur after `AgentRuntime` generates an `AgentMessage` and before `MessageRouter` applies topology and defense checks.
 
+`AttackManager` is integrated into `SingleRunExecutor`: each protocol message is generated first, optionally transformed by the active attack strategy, and then routed through `MessageRouter` with `injected_by_attack` and the effective attack type recorded in the transport envelope. Message events record `attack_injected`, `attack_type`, and `attack_changed_fields`; run summaries report `attacked_messages`.
+
 Supported attacks:
 
 - Message Poisoning.

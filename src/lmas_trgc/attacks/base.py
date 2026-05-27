@@ -24,7 +24,7 @@ class AttackResult(BaseModel):
     attacked_message_id: str
     original_content_hash: str
     attacked_content_hash: str
-    changed_fields: list[str]
+    changed_fields: list[str] = Field(default_factory=list)
     reason: str | None = None
     metadata: dict = Field(default_factory=dict)
 

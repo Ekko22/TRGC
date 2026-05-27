@@ -73,4 +73,16 @@ def test_message_event_attack_fields_exist():
     result = _run("graph", "message_poisoning", "trgc")
     event = result.message_events[0]
     assert hasattr(event, "attack_injected")
+    assert hasattr(event, "attack_type")
     assert hasattr(event, "attack_changed_fields")
+    assert "step_id" in event.route_meta
+    assert "message_type" in event.route_meta
+    assert "exposure_level" in event.route_meta
+
+
+def test_none_attack_has_zero_attacked_messages():
+    result = _run("graph", "none", "trgc")
+    assert result.completed is True
+    assert result.attacked_messages == 0
+    assert all(event.attack_injected is False for event in result.message_events)
+    assert all(event.attack_type is None for event in result.message_events)

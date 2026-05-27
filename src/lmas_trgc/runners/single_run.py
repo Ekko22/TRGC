@@ -14,6 +14,7 @@ from lmas_trgc.llm.client import OpenAICompatibleClient
 from lmas_trgc.llm.mock_client import MockLLMClient
 from lmas_trgc.runners.protocol import ProtocolManager
 from lmas_trgc.tasks.schema import TaskPacket
+from lmas_trgc.topology.exposure import estimate_topology_exposure
 from lmas_trgc.topology.manager import TopologyManager
 
 
@@ -96,7 +97,12 @@ class SingleRunExecutor:
 
     def _context_content(self, result: RouteResult, content: str) -> str:
         if result.gate_action == GateAction.BLOCK:
-            return f"[Safety Notice] A message was blocked before delivery. Reason: {result.reason or 'unspecified'}"
+            sender = result.route_meta.get("sender", "unknown")
+            receiver = result.route_meta.get("receiver", "unknown")
+            return (
+                f"[Safety Notice] A message from {sender} to {receiver} was blocked before delivery. "
+                f"Reason: {result.reason or 'unspecified'}"
+            )
         if result.gate_action == GateAction.REROUTE_TO_SV:
             return f"[Safety Notice] A message required verifier review before delivery. Reason: {result.reason or 'unspecified'}"
         return content
@@ -130,14 +136,18 @@ class SingleRunExecutor:
                 parent_message_id=parent_message_id,
                 protocol_purpose=protocol_edge.purpose,
             )
+            exposure = estimate_topology_exposure(self.topology_manager, config.topology, message.receiver)
             preliminary_route_meta = {
                 "topology": config.topology,
                 "edge": f"{message.sender}->{message.receiver}",
                 "sender": message.sender,
                 "receiver": message.receiver,
+                "step_id": step_id,
+                "message_type": protocol_edge.message_type,
                 "edge_allowed": self.topology_manager.is_allowed_edge(config.topology, message.sender, message.receiver),
-                "fanout_count": self.topology_manager.fanout_count(config.topology, message.receiver),
-                "critical_nodes_reachable": self.topology_manager.critical_nodes_reachable(config.topology, message.receiver),
+                "fanout_count": exposure["fanout_count"],
+                "critical_nodes_reachable": exposure["critical_nodes_reachable"],
+                "exposure_level": exposure["exposure_level"],
                 "is_forwarded_path": message.is_forwarded,
             }
             attack_result = None
@@ -148,13 +158,17 @@ class SingleRunExecutor:
                     preliminary_route_meta,
                     task_packet,
                 )
+            attack_injected = bool(attack_result and attack_result.attacked)
+            effective_attack_type = attack_result.attack_type if attack_injected else None
+            attack_changed_fields = attack_result.changed_fields if attack_injected else []
             result = router.route(
                 routed_message,
                 topology=config.topology,
                 source_model=self.llm_clients_by_agent[protocol_edge.sender].list_models()[0],
-                injected_by_attack=attack_result.attacked if attack_result else False,
-                attack_type=config.attack_type,
+                injected_by_attack=attack_injected,
+                attack_type=effective_attack_type,
             )
+            event_route_meta = {**preliminary_route_meta, **result.route_meta}
             bucket = self._bucket_for_result(result)
             context_store.add_message(
                 protocol_edge.receiver,
@@ -174,11 +188,11 @@ class SingleRunExecutor:
                     blocked=result.blocked,
                     downweighted=result.downweighted,
                     rerouted_to_sv=result.rerouted_to_sv,
-                    attack_injected=attack_result.attacked if attack_result else False,
-                    attack_type=attack_result.attack_type if attack_result and attack_result.attacked else None,
-                    attack_changed_fields=attack_result.changed_fields if attack_result else [],
+                    attack_injected=attack_injected,
+                    attack_type=effective_attack_type,
+                    attack_changed_fields=attack_changed_fields,
                     reason=result.reason,
-                    route_meta=result.route_meta,
+                    route_meta=event_route_meta,
                 )
             )
             parent_message_id = routed_message.message_id
