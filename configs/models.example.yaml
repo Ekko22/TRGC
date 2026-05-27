@@ -1,0 +1,51 @@
+task_models:
+  M1:
+    model_name_env: MODEL1_NAME
+    default_model_name: deepseek-v4-flash
+    provider: openai_compatible
+    base_url_env: DEEPSEEK_BASE_URL
+    default_base_url: https://api.deepseek.com
+    api_key_env: DEEPSEEK_API_KEY
+    temperature: 0
+    top_p: 1
+  M2:
+    model_name_env: MODEL2_NAME
+    default_model_name: ""
+    provider: openai_compatible
+    base_url_env: MODEL2_BASE_URL
+    default_base_url: ""
+    api_key_env: MODEL2_API_KEY
+    temperature: 0
+    top_p: 1
+  M3:
+    model_name_env: MODEL3_NAME
+    default_model_name: ""
+    provider: openai_compatible
+    base_url_env: MODEL3_BASE_URL
+    default_base_url: ""
+    api_key_env: MODEL3_API_KEY
+    temperature: 0
+    top_p: 1
+  M4:
+    model_name_env: MODEL4_NAME
+    default_model_name: ""
+    provider: openai_compatible
+    base_url_env: MODEL4_BASE_URL
+    default_base_url: ""
+    api_key_env: MODEL4_API_KEY
+    temperature: 0
+    top_p: 1
+
+safety_verifier:
+  id: SV
+  model_name_env: LOCAL_SV_MODEL_NAME
+  default_model_name: local-sv-7b
+  provider: openai_compatible
+  base_url_env: LOCAL_SV_BASE_URL
+  default_base_url: http://localhost:8000/v1
+  api_key_env: LOCAL_SV_API_KEY
+  temperature: 0
+  top_p: 1
+  max_output_tokens: 128
+  response_format: json
+  is_task_agent: false

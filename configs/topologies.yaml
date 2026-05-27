@@ -1,0 +1,61 @@
+topologies:
+  star:
+    name: star
+    nodes: [A1, A2, A3, A4, A5, A6, A7]
+    critical_nodes: [A1, A6, A7]
+    edges:
+      - [A2, A1]
+      - [A3, A1]
+      - [A4, A1]
+      - [A5, A1]
+      - [A6, A1]
+      - [A1, A2]
+      - [A1, A3]
+      - [A1, A4]
+      - [A1, A5]
+      - [A1, A6]
+      - [A1, A7]
+  chain:
+    name: chain
+    nodes: [A1, A2, A3, A4, A5, A6, A7]
+    critical_nodes: [A1, A6, A7]
+    edges:
+      - [A1, A2]
+      - [A2, A3]
+      - [A3, A4]
+      - [A4, A5]
+      - [A5, A6]
+      - [A6, A7]
+  graph:
+    name: graph
+    nodes: [A1, A2, A3, A4, A5, A6, A7]
+    critical_nodes: [A1, A6, A7]
+    edges:
+      - [A1, A2]
+      - [A2, A1]
+      - [A1, A3]
+      - [A3, A1]
+      - [A1, A4]
+      - [A4, A1]
+      - [A2, A3]
+      - [A2, A4]
+      - [A3, A4]
+      - [A4, A3]
+      - [A3, A5]
+      - [A4, A5]
+      - [A5, A6]
+      - [A6, A7]
+      - [A1, A7]
+      - [A3, A7]
+      - [A4, A7]
+  tree:
+    name: tree
+    nodes: [A1, A2, A3, A4, A5, A6, A7]
+    critical_nodes: [A1, A6, A7]
+    edges:
+      - [A1, A2]
+      - [A1, A6]
+      - [A2, A3]
+      - [A2, A4]
+      - [A6, A5]
+      - [A6, A7]

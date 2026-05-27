@@ -1,0 +1,36 @@
+defenses:
+  no_defense:
+    enabled: true
+    description: Deliver every topology-valid message without additional checks.
+    uses_sv: false
+    uses_gnn: false
+    pre_delivery: false
+    training_free: true
+  simple_content_guardrail:
+    enabled: true
+    description: Block messages with explicit sensitive or bypass terms.
+    uses_sv: false
+    uses_gnn: false
+    pre_delivery: true
+    training_free: true
+  full_checking_light:
+    enabled: true
+    description: Send every message to the safety verifier before delivery.
+    uses_sv: true
+    uses_gnn: false
+    pre_delivery: true
+    training_free: true
+  gsafeguard:
+    enabled: true
+    description: Stable adapter boundary for later G-Safeguard integration.
+    uses_sv: false
+    uses_gnn: true
+    pre_delivery: false
+    training_free: false
+  trgc:
+    enabled: true
+    description: Topology-aware selective verification with pre-delivery gating.
+    uses_sv: true
+    uses_gnn: false
+    pre_delivery: true
+    training_free: true

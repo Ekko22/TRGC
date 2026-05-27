@@ -1,0 +1,19 @@
+stage: main
+num_tasks_placeholder: 104
+expected_runs: 8320
+topologies:
+  - star
+  - chain
+  - graph
+  - tree
+attacks:
+  - none
+  - message_poisoning
+  - role_impersonation
+  - relay_injection
+defenses:
+  - no_defense
+  - simple_content_guardrail
+  - full_checking_light
+  - gsafeguard
+  - trgc

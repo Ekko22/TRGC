@@ -1,0 +1,21 @@
+attacks:
+  none:
+    enabled: false
+    description: No communication attack.
+    target_scope: none
+    payload_profile: none
+  message_poisoning:
+    enabled: true
+    description: Inject or alter message content during delivery.
+    target_scope: communication_edge
+    payload_profile: poisoning_placeholder
+  role_impersonation:
+    enabled: true
+    description: Declare false authority or sender identity.
+    target_scope: sender_identity
+    payload_profile: impersonation_placeholder
+  relay_injection:
+    enabled: true
+    description: Add unauthorized relay content into communication flow.
+    target_scope: relay_path
+    payload_profile: relay_placeholder

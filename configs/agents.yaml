@@ -1,0 +1,43 @@
+task_agents:
+  A1:
+    role: Planner
+    role_key: PLANNER
+    model_slot: M3
+    is_task_agent: true
+  A2:
+    role: ConstraintFactExtractor
+    role_key: CONSTRAINT_FACT_EXTRACTOR
+    model_slot: M1
+    is_task_agent: true
+  A3:
+    role: WorkerA
+    role_key: WORKER_A
+    model_slot: M1
+    is_task_agent: true
+  A4:
+    role: WorkerB
+    role_key: WORKER_B
+    model_slot: M2
+    is_task_agent: true
+  A5:
+    role: CriticTester
+    role_key: CRITIC_TESTER
+    model_slot: M4
+    is_task_agent: true
+  A6:
+    role: DomainReviewer
+    role_key: DOMAIN_REVIEWER
+    model_slot: M4
+    is_task_agent: true
+  A7:
+    role: FinalizerExecutor
+    role_key: FINALIZER_EXECUTOR
+    model_slot: M3
+    is_task_agent: true
+
+safety_verifier:
+  id: SV
+  role: TrustedSafetyVerifier
+  role_key: TRUSTED_SAFETY_VERIFIER
+  model_slot: safety_verifier
+  is_task_agent: false
