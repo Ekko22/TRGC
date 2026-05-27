@@ -80,6 +80,29 @@ The endpoint check script never calls chat completions by default or with `--che
 
 LMAS-TRGC does not add automatic recovery, automatic repair, automatic regeneration, learned routing, GNN risk classification, RL gate policy, or risk classifier training. Block, downweight, and selective verification are communication-layer gate actions, not recovery mechanisms.
 
+## Task Data Layer
+
+The main experiment uses 11 data sources:
+
+- Public datasets: GSM8K, ProntoQA, MMLU, CSQA, SVAMP, MultiArith, AQuA, HumanEval, MBPP.
+- Synthetic local datasets: Constraint MiniSet and Local-MAS Safety Set.
+
+Step 3 does not automatically download public datasets. Public data may be added later as local JSONL files under `data/processed/public/`, but `data/raw/`, `data/processed/`, and `data/manifests/` must not be committed to Git.
+
+The synthetic datasets can be generated locally:
+
+```bash
+conda run -n lmas-trgc python scripts/create_synthetic_tasks.py --overwrite
+```
+
+The main task manifest can be built with:
+
+```bash
+conda run -n lmas-trgc python scripts/build_task_manifest.py
+```
+
+The final main experiment target is 104 tasks: 8 from each of the 9 public datasets, 16 from Constraint MiniSet, and 16 from Local-MAS Safety Set. When public datasets are not present locally, the manifest builder records them as missing and still creates a synthetic-only manifest for local smoke testing. Local-MAS Safety Set describes generic local multi-agent system scenarios and is not bound to any specific local agent product.
+
 ## Step 1 Status
 
 Step 1 initializes the runtime foundation:
@@ -101,6 +124,14 @@ Step 2 adds:
 - OpenAI-compatible client infrastructure and mock client parity.
 - Structured SV verdict parsing for mock and client modes.
 - Model endpoint configuration audit script.
+
+Step 3 adds:
+
+- Standard task schema, anchors, task packets, and manifest entries.
+- Fixed dataset registry for 9 public and 2 synthetic data sources.
+- Local JSONL loader and HuggingFace loader stub with downloads disabled.
+- Deterministic synthetic task generation and main manifest creation.
+- Deterministic sampling and manifest validation tests.
 
 ## Later Development
 

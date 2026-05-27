@@ -1,0 +1,122 @@
+datasets:
+  gsm8k:
+    name: gsm8k
+    domain: math_reasoning
+    source_type: hf
+    default_split: test
+    target_main_count: 8
+    metric: exact_match
+    description: Grade-school math word problems.
+    local_path: data/processed/public/gsm8k.jsonl
+    hf_path: gsm8k
+    hf_config: main
+  prontoqa:
+    name: prontoqa
+    domain: logic_reasoning
+    source_type: local_jsonl
+    default_split: test
+    target_main_count: 8
+    metric: accuracy
+    description: Logic reasoning tasks stored as local JSONL.
+    local_path: data/processed/public/prontoqa.jsonl
+    hf_path:
+    hf_config:
+  mmlu:
+    name: mmlu
+    domain: knowledge_reasoning
+    source_type: hf
+    default_split: test
+    target_main_count: 8
+    metric: accuracy
+    description: Knowledge reasoning multiple-choice tasks.
+    local_path: data/processed/public/mmlu.jsonl
+    hf_path: cais/mmlu
+    hf_config: all
+  csqa:
+    name: csqa
+    domain: commonsense_reasoning
+    source_type: hf
+    default_split: validation
+    target_main_count: 8
+    metric: accuracy
+    description: CommonsenseQA multiple-choice tasks.
+    local_path: data/processed/public/csqa.jsonl
+    hf_path: commonsense_qa
+    hf_config:
+  svamp:
+    name: svamp
+    domain: math_reasoning
+    source_type: local_jsonl
+    default_split: test
+    target_main_count: 8
+    metric: exact_match
+    description: SVAMP math reasoning tasks stored as local JSONL.
+    local_path: data/processed/public/svamp.jsonl
+    hf_path:
+    hf_config:
+  multiarith:
+    name: multiarith
+    domain: math_reasoning
+    source_type: local_jsonl
+    default_split: test
+    target_main_count: 8
+    metric: exact_match
+    description: MultiArith math reasoning tasks stored as local JSONL.
+    local_path: data/processed/public/multiarith.jsonl
+    hf_path:
+    hf_config:
+  aqua:
+    name: aqua
+    domain: math_reasoning
+    source_type: hf
+    default_split: test
+    target_main_count: 8
+    metric: accuracy
+    description: AQuA rationales and answer selection tasks.
+    local_path: data/processed/public/aqua.jsonl
+    hf_path: aqua_rat
+    hf_config:
+  humaneval:
+    name: humaneval
+    domain: code
+    source_type: hf
+    default_split: test
+    target_main_count: 8
+    metric: pass_at_1_or_review_accuracy
+    description: HumanEval code generation tasks.
+    local_path: data/processed/public/humaneval.jsonl
+    hf_path: openai_humaneval
+    hf_config:
+  mbpp:
+    name: mbpp
+    domain: code
+    source_type: hf
+    default_split: test
+    target_main_count: 8
+    metric: pass_at_1_or_review_accuracy
+    description: MBPP code generation tasks.
+    local_path: data/processed/public/mbpp.jsonl
+    hf_path: mbpp
+    hf_config:
+  constraint_miniset:
+    name: constraint_miniset
+    domain: constraints
+    source_type: synthetic
+    default_split: test
+    target_main_count: 16
+    metric: task_success_and_safety
+    description: Local synthetic constraint-following tasks.
+    local_path: data/processed/synthetic/constraint_miniset.jsonl
+    hf_path:
+    hf_config:
+  local_mas_safety:
+    name: local_mas_safety
+    domain: local_mas_safety
+    source_type: synthetic
+    default_split: test
+    target_main_count: 16
+    metric: task_success_and_safety
+    description: Local multi-agent safety scenarios independent of any specific product.
+    local_path: data/processed/synthetic/local_mas_safety.jsonl
+    hf_path:
+    hf_config:
