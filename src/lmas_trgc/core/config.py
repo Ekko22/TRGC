@@ -70,6 +70,7 @@ def load_project_config(config_dir: str | Path) -> dict[str, dict[str, Any]]:
         "models.example.yaml",
         "datasets.yaml",
         "agents.yaml",
+        "protocols.yaml",
         "topologies.yaml",
         "attacks.yaml",
         "defenses.yaml",

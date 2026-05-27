@@ -1,0 +1,213 @@
+protocols:
+  star:
+    topology: star
+    steps:
+      - step_id: 1
+        edges:
+          - sender: A1
+            receiver: A2
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign fact extraction work."
+          - sender: A1
+            receiver: A3
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign independent solution work."
+          - sender: A1
+            receiver: A4
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign independent cross-check work."
+          - sender: A1
+            receiver: A5
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign critique and test work."
+          - sender: A1
+            receiver: A6
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign domain review work."
+      - step_id: 2
+        edges:
+          - sender: A2
+            receiver: A1
+            message_type: FACT_EXTRACTION
+            purpose: "Return extracted facts and constraints."
+          - sender: A3
+            receiver: A1
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Return independent intermediate result."
+          - sender: A4
+            receiver: A1
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Return cross-check intermediate result."
+          - sender: A5
+            receiver: A1
+            message_type: CRITIQUE
+            purpose: "Return critique and boundary cases."
+          - sender: A6
+            receiver: A1
+            message_type: REVIEW
+            purpose: "Return domain and safety review."
+      - step_id: 3
+        edges:
+          - sender: A1
+            receiver: A7
+            message_type: FINALIZATION
+            purpose: "Send final synthesis to finalizer."
+  chain:
+    topology: chain
+    steps:
+      - step_id: 1
+        edges:
+          - sender: A1
+            receiver: A2
+            message_type: TASK_ASSIGNMENT
+            purpose: "Start the chain with task constraints."
+      - step_id: 2
+        edges:
+          - sender: A2
+            receiver: A3
+            message_type: FACT_EXTRACTION
+            purpose: "Pass extracted facts forward."
+      - step_id: 3
+        edges:
+          - sender: A3
+            receiver: A4
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Pass intermediate solution forward."
+      - step_id: 4
+        edges:
+          - sender: A4
+            receiver: A5
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Pass cross-check result forward."
+      - step_id: 5
+        edges:
+          - sender: A5
+            receiver: A6
+            message_type: CRITIQUE
+            purpose: "Pass critique to reviewer."
+      - step_id: 6
+        edges:
+          - sender: A6
+            receiver: A7
+            message_type: REVIEW
+            purpose: "Pass reviewed result to finalizer."
+  graph:
+    topology: graph
+    steps:
+      - step_id: 1
+        edges:
+          - sender: A1
+            receiver: A2
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign fact extraction work."
+          - sender: A1
+            receiver: A3
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign independent solution work."
+          - sender: A1
+            receiver: A4
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign cross-check work."
+      - step_id: 2
+        edges:
+          - sender: A2
+            receiver: A3
+            message_type: FACT_EXTRACTION
+            purpose: "Share extracted facts with worker A."
+          - sender: A2
+            receiver: A4
+            message_type: FACT_EXTRACTION
+            purpose: "Share extracted facts with worker B."
+          - sender: A3
+            receiver: A4
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Cross-share worker A result."
+          - sender: A4
+            receiver: A3
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Cross-share worker B result."
+      - step_id: 3
+        edges:
+          - sender: A3
+            receiver: A5
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Send worker A result to critic."
+          - sender: A4
+            receiver: A5
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Send worker B result to critic."
+          - sender: A3
+            receiver: A7
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Direct worker A result to finalizer."
+          - sender: A4
+            receiver: A7
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Direct worker B result to finalizer."
+      - step_id: 4
+        edges:
+          - sender: A5
+            receiver: A6
+            message_type: CRITIQUE
+            purpose: "Send critique to domain reviewer."
+          - sender: A6
+            receiver: A7
+            message_type: REVIEW
+            purpose: "Send review to finalizer."
+  tree:
+    topology: tree
+    steps:
+      - step_id: 1
+        edges:
+          - sender: A1
+            receiver: A2
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign left branch work."
+          - sender: A1
+            receiver: A6
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign review branch work."
+      - step_id: 2
+        edges:
+          - sender: A2
+            receiver: A3
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign worker A from left branch."
+          - sender: A2
+            receiver: A4
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign worker B from left branch."
+          - sender: A6
+            receiver: A5
+            message_type: TASK_ASSIGNMENT
+            purpose: "Assign critique from review branch."
+      - step_id: 3
+        edges:
+          - sender: A3
+            receiver: A2
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Return worker A result to branch parent."
+          - sender: A4
+            receiver: A2
+            message_type: INTERMEDIATE_RESULT
+            purpose: "Return worker B result to branch parent."
+          - sender: A5
+            receiver: A6
+            message_type: CRITIQUE
+            purpose: "Return critique to branch parent."
+      - step_id: 4
+        edges:
+          - sender: A2
+            receiver: A1
+            message_type: REVIEW
+            purpose: "Return branch summary to planner."
+          - sender: A6
+            receiver: A1
+            message_type: REVIEW
+            purpose: "Return review branch summary to planner."
+      - step_id: 5
+        edges:
+          - sender: A1
+            receiver: A7
+            message_type: FINALIZATION
+            purpose: "Send final synthesis to finalizer."

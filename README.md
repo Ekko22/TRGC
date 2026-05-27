@@ -80,6 +80,33 @@ The endpoint check script never calls chat completions by default or with `--che
 
 LMAS-TRGC does not add automatic recovery, automatic repair, automatic regeneration, learned routing, GNN risk classification, RL gate policy, or risk classifier training. Block, downweight, and selective verification are communication-layer gate actions, not recovery mechanisms.
 
+## Runtime Protocol Layer
+
+The runtime separates three concerns:
+
+- Topology defines which directed communication edges are legal.
+- Protocol defines the ordered message-passing steps for a single task run.
+- Defense defines pre-delivery gating behavior for each routed message.
+
+SV is not part of topology or protocol. It remains a sidecar that can only be called through TRGC or Full Checking-Light.
+
+Stage-A smoke runs use `MockLLMClient` only. They do not call real LLMs, `/chat/completions`, `/models`, datasets, or external services.
+
+Run one Stage-A smoke:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology star --defense trgc --json
+```
+
+Run all four topology smoke checks:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology star --defense trgc --json
+conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology chain --defense trgc --json
+conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology graph --defense trgc --json
+conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology tree --defense trgc --json
+```
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
@@ -168,6 +195,14 @@ Step 4 adds:
 - Optional explicit HuggingFace download mode for supported HF sources.
 - Public processed JSONL integration with manifest building.
 
+Step 5 adds:
+
+- Explicit topology protocol definitions for Star, Chain, Graph, and Tree.
+- Tree topology return edges for branch aggregation and finalization.
+- Agent profiles, context buckets, prompt building, and mock-only agent runtime.
+- SingleRunExecutor that routes every protocol message through MessageRouter and DefenseAdapter.
+- Stage-A smoke runner for 7-agent mock execution.
+
 ## Later Development
 
-Later stages will add task manifests, dataset preparation, agent runtime orchestration, attack payload implementations, real model configuration, SV service integration, G-Safeguard adapter integration, experiment execution, aggregation, tables, and figures.
+Later stages will add attack payload implementations, real model execution modes, SV service integration, G-Safeguard adapter integration, matrix execution, aggregation, tables, and figures.
