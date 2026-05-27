@@ -1,6 +1,7 @@
 import pytest
 
 from lmas_trgc.tasks.dataset_sampler import build_main_task_selection, deterministic_sample
+from lmas_trgc.tasks.loader import load_dataset_tasks, save_tasks_to_jsonl
 from lmas_trgc.tasks.local_synthetic import generate_all_synthetic_tasks, generate_constraint_miniset
 from lmas_trgc.tasks.manifest import (
     build_task_manifest,
@@ -9,6 +10,7 @@ from lmas_trgc.tasks.manifest import (
     validate_manifest_counts,
 )
 from lmas_trgc.tasks.registry import get_default_dataset_specs
+from lmas_trgc.tasks.schema import TaskRecord
 
 
 def test_deterministic_sample_is_stable():
@@ -54,3 +56,31 @@ def test_validate_manifest_counts_passes_and_fails():
     validate_manifest_counts(manifest, {"constraint_miniset": 2})
     with pytest.raises(ValueError):
         validate_manifest_counts(manifest, {"constraint_miniset": 3})
+
+
+def test_manifest_with_public_gsm8k_and_synthetic_reaches_40(tmp_path):
+    public_path = tmp_path / "processed" / "public" / "gsm8k.jsonl"
+    public_tasks = [
+        TaskRecord(
+            task_id=f"gsm8k_test_{idx:05d}",
+            dataset="gsm8k",
+            domain="math_reasoning",
+            split="test",
+            prompt=f"What is {idx} + 1?",
+            gold_answer=str(idx + 1),
+            source="public",
+        )
+        for idx in range(8)
+    ]
+    save_tasks_to_jsonl(public_tasks, public_path)
+
+    specs = get_default_dataset_specs()
+    specs["gsm8k"] = specs["gsm8k"].model_copy(update={"local_path": str(public_path)})
+    all_tasks = generate_all_synthetic_tasks()
+    all_tasks["gsm8k"] = load_dataset_tasks(specs["gsm8k"], tmp_path)
+    selection = build_main_task_selection(all_tasks, specs)
+    manifest = build_task_manifest(selection.selected_tasks, manifest_id="with_public", missing_datasets=selection.missing_datasets)
+    assert manifest.total_tasks >= 40
+    assert manifest.dataset_counts["gsm8k"] == 8
+    assert "prontoqa" in manifest.missing_datasets
+    assert "prompt" not in str(manifest.model_dump()["entries"])
