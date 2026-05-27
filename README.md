@@ -135,6 +135,35 @@ conda run -n lmas-trgc python scripts/run_stage_b_pilot.py --topology graph --at
 conda run -n lmas-trgc python scripts/run_stage_b_pilot.py --topology graph --attack relay_injection --defense trgc --json
 ```
 
+## Stage-B Result Artifacts
+
+By default, Stage-B prints a run summary and does not write files. Use `--save-artifact` to persist a structured run artifact under `results/runs/stage_b/<run_id>/`.
+
+Each run artifact contains:
+
+- `run_summary.json`
+- `message_events.jsonl`
+- `message_events.csv`
+- `topology_events.jsonl`
+- `metrics.json`
+- `config_snapshot.json`
+- `README.md`
+- `manifest.json`
+
+Run and save one Stage-B artifact:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_pilot.py --topology graph --attack message_poisoning --defense trgc --save-artifact --json
+```
+
+Inspect and validate the artifact:
+
+```bash
+conda run -n lmas-trgc python scripts/inspect_run_artifact.py results/runs/stage_b/<run_id>
+```
+
+Artifacts store hashes, structured event fields, and metrics. They do not store full prompts, final context text, API keys, or raw LLM responses. `results/runs/` must not be committed to Git.
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
@@ -238,6 +267,13 @@ Step 6 adds:
 - Attack targeting rules for high-value receivers, graph direct-to-finalizer edges, chain middle edges, and tree branch summaries.
 - Stage-B pilot runner for mock-only attack injection smoke tests.
 
+Step 7 adds:
+
+- Structured Stage-B run artifacts under `results/runs/stage_b/<run_id>/`.
+- Run summary, message event, topology event, metrics, config snapshot, README, and manifest files.
+- Artifact writer and loader modules with validation.
+- Optional Stage-B persistence via `--save-artifact`; default Stage-B runs remain stdout-only.
+
 ## Later Development
 
-Later stages will add real model execution modes, SV service integration, G-Safeguard adapter integration, matrix execution, aggregation, tables, and figures.
+Later stages will add dataset-backed pilot execution, real model execution modes, SV service integration, G-Safeguard adapter integration, matrix execution, aggregation, tables, and figures.

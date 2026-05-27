@@ -14,6 +14,7 @@ from lmas_trgc.attacks.manager import AttackManager
 from lmas_trgc.core.ids import make_run_id
 from lmas_trgc.defenses.factory import create_defense_adapter
 from lmas_trgc.defenses.trgc.safety_verifier import SafetyVerifier
+from lmas_trgc.logging.artifact_writer import RunArtifactWriter
 from lmas_trgc.llm.mock_client import MockLLMClient
 from lmas_trgc.runners.protocol import ProtocolManager
 from lmas_trgc.runners.single_run import SingleRunConfig, SingleRunExecutor
@@ -34,7 +35,7 @@ def _task_for(dataset: str, index: int):
     return tasks[index]
 
 
-def _summary(result) -> dict:
+def _summary(result, artifact_dir: str | None = None) -> dict:
     return {
         "run_id": result.run_id,
         "task_id": result.task_id,
@@ -48,6 +49,7 @@ def _summary(result) -> dict:
         "downweighted_messages": result.downweighted_messages,
         "rerouted_messages": result.rerouted_messages,
         "completed": result.completed,
+        "artifact_dir": artifact_dir,
     }
 
 
@@ -65,6 +67,9 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--output-root", default="results/runs")
+    parser.add_argument("--save-artifact", action="store_true")
+    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
     try:
         task = _task_for(args.dataset, args.task_index)
@@ -85,6 +90,7 @@ def main() -> int:
                 "attack": args.attack,
                 "dataset": args.dataset,
                 "dry_run": True,
+                "artifact_dir": None,
             }
             print(json.dumps(output, indent=2) if args.json else output)
             return 0
@@ -103,7 +109,7 @@ def main() -> int:
             attack_manager=AttackManager(args.attack),
         )
         result = executor.run(
-            build_task_packet(task),
+            task_packet := build_task_packet(task),
             SingleRunConfig(
                 run_id=run_id,
                 topology=args.topology,
@@ -113,7 +119,26 @@ def main() -> int:
                 max_steps=args.max_steps,
             ),
         )
-        summary = _summary(result)
+        artifact_dir = None
+        if args.save_artifact:
+            writer = RunArtifactWriter(args.output_root, stage_name="stage_b", overwrite=args.overwrite)
+            manifest = writer.write_run_artifact(
+                result,
+                task_packet,
+                config_snapshot={
+                    "stage": "stage_b",
+                    "topology": args.topology,
+                    "defense": args.defense,
+                    "attack": args.attack,
+                    "dataset": args.dataset,
+                    "task_index": args.task_index,
+                    "max_steps": args.max_steps,
+                    "use_mock_llm": True,
+                    "save_artifact": args.save_artifact,
+                },
+            )
+            artifact_dir = manifest.artifact_dir
+        summary = _summary(result, artifact_dir=artifact_dir)
         print(json.dumps(summary, indent=2) if args.json else summary)
         return 0
     except Exception as exc:

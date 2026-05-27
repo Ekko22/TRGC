@@ -5,6 +5,11 @@ from pathlib import Path
 
 
 class TopologyLogger:
+    """Append-only topology CSV logger kept for compatibility.
+
+    Stage-B and later structured artifacts should use RunArtifactWriter.
+    """
+
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)

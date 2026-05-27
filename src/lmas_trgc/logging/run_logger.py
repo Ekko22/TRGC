@@ -5,6 +5,11 @@ from pathlib import Path
 
 
 class RunLogger:
+    """Append-only CSV logger kept for compatibility.
+
+    Stage-B and later structured artifacts should use RunArtifactWriter.
+    """
+
     def __init__(self, path: str | Path, fieldnames: list[str] | None = None) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)

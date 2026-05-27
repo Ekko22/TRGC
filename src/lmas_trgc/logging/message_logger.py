@@ -29,6 +29,11 @@ MESSAGE_LOG_FIELDS = [
 
 
 class MessageLogger:
+    """Append-only message CSV logger kept for compatibility.
+
+    Stage-B and later structured artifacts should use RunArtifactWriter.
+    """
+
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
