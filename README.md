@@ -164,6 +164,36 @@ conda run -n lmas-trgc python scripts/inspect_run_artifact.py results/runs/stage
 
 Artifacts store hashes, structured event fields, and metrics. They do not store full prompts, final context text, API keys, or raw LLM responses. `results/runs/` must not be committed to Git.
 
+## Stage-B Batch Runs
+
+Step 8 adds a manifest-backed Stage-B batch runner, batch artifact index, and aggregate metrics. Single-run smoke still uses `run_stage_b_pilot.py`; batch execution uses `run_stage_b_batch.py`.
+
+The default batch is synthetic and mock-only. It does not call real LLMs, `/chat/completions`, `/models`, or external services. Batch outputs are written under `results/runs/stage_b_batches/<batch_id>/`, while each individual run artifact remains under `results/runs/stage_b/<run_id>/`. Both paths must stay out of Git.
+
+Dry-run the default batch:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_batch.py --dry-run --json
+```
+
+Run the default batch:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_batch.py --json
+```
+
+Run a wider Stage-B matrix:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_batch.py --datasets local_mas_safety,constraint_miniset --task-limit-per-dataset 2 --topologies star,chain,graph,tree --attacks message_poisoning,role_impersonation,relay_injection --defenses no_defense,trgc --json
+```
+
+Aggregate an existing batch:
+
+```bash
+conda run -n lmas-trgc python scripts/aggregate_stage_b_artifacts.py --batch-dir results/runs/stage_b_batches/<batch_id> --group-by topology --group-by defense_name --json
+```
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
@@ -273,6 +303,13 @@ Step 7 adds:
 - Run summary, message event, topology event, metrics, config snapshot, README, and manifest files.
 - Artifact writer and loader modules with validation.
 - Optional Stage-B persistence via `--save-artifact`; default Stage-B runs remain stdout-only.
+
+Step 8 adds:
+
+- TaskResolver modes for synthetic, processed JSONL, and manifest-backed task selection.
+- Stage-B batch runner over task, topology, attack, and defense matrices.
+- Batch-level run index, summary, aggregate metrics, README, and manifest files.
+- Pure-Python aggregation over saved Stage-B artifacts.
 
 ## Later Development
 
