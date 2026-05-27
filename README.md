@@ -32,6 +32,8 @@ The SV sidecar is `SV TrustedSafetyVerifier`. It is not a task agent, does not a
 
 ## Environment
 
+This project uses one Conda environment: `lmas-trgc`.
+
 Create or update the final Conda environment:
 
 ```bash
@@ -52,7 +54,27 @@ conda run -n lmas-trgc python -m pytest -q
 
 ## API Configuration
 
-Copy the variable names from `.env.example` into your local `.env` or shell environment and fill in real values there. Do not commit `.env` or any API key. Model configuration is read through environment variable names in `configs/models.example.yaml`.
+Copy the variable names from `.env.example` into your local `.env` or shell environment and fill in real values there:
+
+```bash
+cp .env.example .env
+```
+
+Do not commit `.env` or any API key. Task models are configured through `configs/models.example.yaml` and environment variables. The SV is a local lightweight OpenAI-compatible model endpoint, is not part of task topology, and only receives short verification payloads from TRGC or Full Checking-Light.
+
+Check model configuration without network access:
+
+```bash
+conda run -n lmas-trgc python scripts/check_model_endpoints.py
+```
+
+Optionally check `/models` endpoints only:
+
+```bash
+conda run -n lmas-trgc python scripts/check_model_endpoints.py --check-models-endpoint
+```
+
+The endpoint check script never calls chat completions by default or with `--check-models-endpoint`; it only checks configuration unless `/models` probing is explicitly requested.
 
 ## Design Boundary
 
@@ -70,6 +92,15 @@ Step 1 initializes the runtime foundation:
 - Mock LLM client and OpenAI-compatible client boundary.
 - No Defense, Simple Content Guardrail, Full Checking-Light, G-Safeguard boundary, and TRGC adapters.
 - CSV loggers, script entry points, and unit tests.
+
+Step 2 adds:
+
+- Project path discovery and safer config loading.
+- Secret redaction helpers and optional `.env` loading.
+- Model registry for M1/M2/M3/M4 and the SV sidecar.
+- OpenAI-compatible client infrastructure and mock client parity.
+- Structured SV verdict parsing for mock and client modes.
+- Model endpoint configuration audit script.
 
 ## Later Development
 

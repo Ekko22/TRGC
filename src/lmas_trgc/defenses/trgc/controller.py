@@ -31,36 +31,38 @@ class TRGCAdapter(DefenseAdapter):
                 "evidence_missing": message.parent_message_id is None,
             }
         )
-        flags = [*decision.triggered_flags, *verdict.get("flags", [])]
-        action = verdict.get("action", "allow")
-        if action == "block":
+        sv_flags = []
+        if verdict.raw and isinstance(verdict.raw.get("matched_terms"), list):
+            sv_flags = verdict.raw["matched_terms"]
+        flags = [*decision.triggered_flags, *sv_flags]
+        if verdict.verdict == "block":
             return GateDecision(
                 action=GateAction.BLOCK,
                 delivered=False,
                 context_bucket="blocked",
                 rerouted_to_sv=True,
                 blocked=True,
-                reason=verdict.get("reason") or decision.reason,
+                reason=verdict.reason or decision.reason,
                 triggered_flags=flags,
-                metadata={"sv_verdict": verdict},
+                metadata={"sv_verdict": verdict.model_dump()},
             )
-        if action == "downweight":
+        if verdict.verdict == "downweight":
             return GateDecision(
                 action=GateAction.DOWNWEIGHT,
                 delivered=True,
                 context_bucket="risk_marked",
                 rerouted_to_sv=True,
                 downweighted=True,
-                reason=verdict.get("reason") or decision.reason,
+                reason=verdict.reason or decision.reason,
                 triggered_flags=flags,
-                metadata={"sv_verdict": verdict},
+                metadata={"sv_verdict": verdict.model_dump()},
             )
         return GateDecision(
             action=GateAction.ALLOW,
             delivered=True,
             context_bucket="trusted",
             rerouted_to_sv=True,
-            reason=verdict.get("reason"),
+            reason=verdict.reason,
             triggered_flags=flags,
-            metadata={"sv_verdict": verdict},
+            metadata={"sv_verdict": verdict.model_dump()},
         )

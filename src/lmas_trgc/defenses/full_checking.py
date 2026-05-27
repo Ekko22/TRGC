@@ -15,33 +15,35 @@ class FullCheckingLightAdapter(DefenseAdapter):
         verdict = self.safety_verifier.verify(
             {"text": message.content, "route_meta": route_meta, "message": message.model_dump()}
         )
-        action = verdict.get("action", "allow")
-        if action == "block":
+        sv_flags = []
+        if verdict.raw and isinstance(verdict.raw.get("matched_terms"), list):
+            sv_flags = verdict.raw["matched_terms"]
+        if verdict.verdict == "block":
             return GateDecision(
                 action=GateAction.BLOCK,
                 delivered=False,
                 context_bucket="blocked",
                 blocked=True,
                 rerouted_to_sv=True,
-                reason=verdict.get("reason"),
-                triggered_flags=verdict.get("flags", []),
-                metadata={"sv_verdict": verdict},
+                reason=verdict.reason,
+                triggered_flags=sv_flags,
+                metadata={"sv_verdict": verdict.model_dump()},
             )
-        if action == "downweight":
+        if verdict.verdict == "downweight":
             return GateDecision(
                 action=GateAction.DOWNWEIGHT,
                 delivered=True,
                 context_bucket="risk_marked",
                 downweighted=True,
                 rerouted_to_sv=True,
-                reason=verdict.get("reason"),
-                triggered_flags=verdict.get("flags", []),
-                metadata={"sv_verdict": verdict},
+                reason=verdict.reason,
+                triggered_flags=sv_flags,
+                metadata={"sv_verdict": verdict.model_dump()},
             )
         return GateDecision(
             action=GateAction.ALLOW,
             delivered=True,
             context_bucket="trusted",
             rerouted_to_sv=True,
-            metadata={"sv_verdict": verdict},
+            metadata={"sv_verdict": verdict.model_dump()},
         )
