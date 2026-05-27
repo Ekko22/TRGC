@@ -32,6 +32,7 @@ def _default_batch_id(args: argparse.Namespace) -> str:
         args.attacks,
         args.defenses,
         args.max_steps,
+        args.judge_mode,
         length=16,
     )
 
@@ -46,6 +47,8 @@ def _summary(result) -> dict:
         "batch_dir": result.batch_dir,
         "run_index_path": result.run_index_path,
         "aggregate_metrics_path": result.aggregate_metrics_path,
+        "standard_effect_metrics_path": result.standard_effect_metrics_path,
+        "valid_for_paper_runs": result.valid_for_paper_runs,
     }
 
 
@@ -62,6 +65,7 @@ def main() -> int:
     parser.add_argument("--output-root", default="results/runs")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--judge-mode", choices=["mock_protocol", "rule_based"], default="mock_protocol")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -92,6 +96,7 @@ def main() -> int:
                 "topologies": topologies,
                 "attacks": attacks,
                 "defenses": defenses,
+                "judge_mode": args.judge_mode,
             }
             print(json.dumps(output, ensure_ascii=False, indent=2) if args.json else output)
             return 0
@@ -119,6 +124,7 @@ def main() -> int:
                 overwrite=args.overwrite,
                 max_steps=args.max_steps,
                 use_mock_llm=True,
+                judge_mode=args.judge_mode,
             ),
         )
         output = _summary(result)

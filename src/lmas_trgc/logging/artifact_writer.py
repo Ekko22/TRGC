@@ -75,6 +75,8 @@ class RunArtifactWriter:
         result: SingleRunResult,
         task_packet: TaskPacket,
         config_snapshot: dict,
+        judge_outcome: Any | None = None,
+        standard_metrics: Any | None = None,
     ) -> RunArtifactManifest:
         created_at = _created_at()
         run_dir = self.make_run_dir(result.run_id)
@@ -100,14 +102,22 @@ class RunArtifactWriter:
             "readme": "README.md",
             "manifest": "manifest.json",
         }
+        if judge_outcome is not None:
+            files["judge_outcome"] = "judge_outcome.json"
+        if standard_metrics is not None:
+            files["standard_metrics"] = "standard_metrics.json"
 
         self.write_json(run_dir / files["run_summary"], summary)
         self.write_jsonl(run_dir / files["message_events_jsonl"], message_events)
         self.write_csv(run_dir / files["message_events_csv"], message_events)
         self.write_jsonl(run_dir / files["topology_events_jsonl"], topology_events)
         self.write_json(run_dir / files["metrics"], metrics)
+        if judge_outcome is not None:
+            self.write_json(run_dir / files["judge_outcome"], judge_outcome)
+        if standard_metrics is not None:
+            self.write_json(run_dir / files["standard_metrics"], standard_metrics)
         self.write_json(run_dir / files["config_snapshot"], _sanitize_config(config_snapshot))
-        self.write_readme(run_dir / files["readme"], summary, metrics)
+        self.write_readme(run_dir / files["readme"], summary, metrics, judge_outcome=judge_outcome)
 
         manifest = RunArtifactManifest(
             run_id=result.run_id,
@@ -143,7 +153,7 @@ class RunArtifactWriter:
                 for row in rows:
                     writer.writerow({field: _csv_value(row.get(field)) for field in fieldnames})
 
-    def write_readme(self, path: Path, summary: Any, metrics: Any) -> None:
+    def write_readme(self, path: Path, summary: Any, metrics: Any, judge_outcome: Any | None = None) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         lines = [
             "# LMAS-TRGC Run Artifact",
@@ -158,9 +168,24 @@ class RunArtifactWriter:
             f"- blocked_messages: `{summary.blocked_messages}`",
             f"- delivery_rate: `{metrics.delivery_rate:.4f}`",
             f"- block_rate: `{metrics.block_rate:.4f}`",
-            "",
-            "This artifact stores structured run metadata, event records, and metrics only. "
-            "It does not store full prompts, final context text, API keys, or raw LLM responses.",
-            "",
         ]
+        if judge_outcome is not None:
+            lines.extend(
+                [
+                    f"- judge_mode: `{judge_outcome.judge_mode}`",
+                    f"- valid_for_paper: `{judge_outcome.valid_for_paper}`",
+                    f"- task_success: `{judge_outcome.task_success}`",
+                    f"- attack_success: `{judge_outcome.attack_success}`",
+                    f"- safety_violation: `{judge_outcome.safety_violation}`",
+                    f"- robust_success: `{judge_outcome.robust_success}`",
+                ]
+            )
+        lines.extend(
+            [
+                "",
+                "This artifact stores structured run metadata, event records, metrics, and optional judge outcomes only. "
+                "It does not store full prompts, final context text, final output text, API keys, or raw LLM responses.",
+                "",
+            ]
+        )
         path.write_text("\n".join(lines), encoding="utf-8")

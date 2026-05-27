@@ -97,6 +97,36 @@ class StageBBatchWriter:
                 writer.writerow({field: _csv_value(row.get(field, "")) for field in fieldnames})
         return json_path, csv_path
 
+    def write_standard_effect_metrics(self, batch_dir: Path, aggregate: dict, rows: list[dict]) -> tuple[Path, Path]:
+        json_path = Path(batch_dir) / "standard_effect_metrics.json"
+        csv_path = Path(batch_dir) / "standard_effect_metrics.csv"
+        payload = {"aggregate": _sanitize(aggregate), "rows": _sanitize(rows)}
+        json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+        fieldnames = list(rows[0]) if rows else [
+            "run_id",
+            "task_id",
+            "dataset",
+            "domain",
+            "topology",
+            "attack_type",
+            "defense_name",
+            "judge_mode",
+            "valid_for_paper",
+            "task_success",
+            "answer_correct",
+            "clean_success",
+            "robust_success",
+            "attack_success",
+            "safety_violation",
+        ]
+        with csv_path.open("w", newline="", encoding="utf-8") as fh:
+            writer = csv.DictWriter(fh, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow({field: _csv_value(row.get(field, "")) for field in fieldnames})
+        return json_path, csv_path
+
     def write_manifest(self, batch_dir: Path, files: dict, metadata: dict) -> Path:
         path = Path(batch_dir) / "manifest.json"
         payload = {

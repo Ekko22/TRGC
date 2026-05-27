@@ -26,6 +26,7 @@ class RunSummaryRecord(BaseModel):
     rerouted_messages: int = Field(ge=0)
     attacked_messages: int = Field(ge=0)
     final_context_hash: str | None = None
+    final_output_hash: str | None = None
     created_at: str
     metadata: dict = Field(default_factory=dict)
 

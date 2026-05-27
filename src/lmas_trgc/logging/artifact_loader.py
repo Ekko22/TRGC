@@ -11,6 +11,8 @@ from lmas_trgc.logging.schemas import (
     RunSummaryRecord,
     TopologyEventRecord,
 )
+from lmas_trgc.analysis.standard_metrics import StandardRunMetrics
+from lmas_trgc.judging.judge import JudgeOutcome
 
 
 REQUIRED_FILES = {
@@ -67,7 +69,21 @@ def load_manifest(run_dir: Path) -> RunArtifactManifest:
     return RunArtifactManifest(**_read_json(Path(run_dir) / "manifest.json"))
 
 
-def validate_run_artifact(run_dir: Path) -> bool:
+def load_judge_outcome(run_dir: Path) -> JudgeOutcome | None:
+    path = Path(run_dir) / "judge_outcome.json"
+    if not path.exists():
+        return None
+    return JudgeOutcome(**_read_json(path))
+
+
+def load_standard_metrics(run_dir: Path) -> StandardRunMetrics | None:
+    path = Path(run_dir) / "standard_metrics.json"
+    if not path.exists():
+        return None
+    return StandardRunMetrics(**_read_json(path))
+
+
+def validate_run_artifact(run_dir: Path, require_judge: bool = False) -> bool:
     run_dir = Path(run_dir)
     missing = sorted(name for name in REQUIRED_FILES if not (run_dir / name).exists())
     if missing:
@@ -78,6 +94,13 @@ def validate_run_artifact(run_dir: Path) -> bool:
     topology_events = load_topology_events(run_dir)
     metrics = load_metrics(run_dir)
     manifest = load_manifest(run_dir)
+    if require_judge:
+        if not (run_dir / "judge_outcome.json").exists():
+            raise ValueError(f"run artifact is missing judge_outcome.json in {run_dir}")
+        if not (run_dir / "standard_metrics.json").exists():
+            raise ValueError(f"run artifact is missing standard_metrics.json in {run_dir}")
+        load_judge_outcome(run_dir)
+        load_standard_metrics(run_dir)
 
     if summary.run_id != metrics.run_id or summary.run_id != manifest.run_id:
         raise ValueError(

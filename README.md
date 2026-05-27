@@ -164,6 +164,8 @@ conda run -n lmas-trgc python scripts/inspect_run_artifact.py results/runs/stage
 
 Artifacts store hashes, structured event fields, and metrics. They do not store full prompts, final context text, API keys, or raw LLM responses. `results/runs/` must not be committed to Git.
 
+When `--judge-mode` is provided, saved artifacts also include `judge_outcome.json` and `standard_metrics.json`. These files store structured judge outcomes and standard effect metrics only; they do not store final output text.
+
 ## Stage-B Batch Runs
 
 Step 8 adds a manifest-backed Stage-B batch runner, batch artifact index, and aggregate metrics. Single-run smoke still uses `run_stage_b_pilot.py`; batch execution uses `run_stage_b_batch.py`.
@@ -179,7 +181,7 @@ conda run -n lmas-trgc python scripts/run_stage_b_batch.py --dry-run --json
 Run the default batch:
 
 ```bash
-conda run -n lmas-trgc python scripts/run_stage_b_batch.py --json
+conda run -n lmas-trgc python scripts/run_stage_b_batch.py --judge-mode mock_protocol --json
 ```
 
 Run a wider Stage-B matrix:
@@ -192,6 +194,35 @@ Aggregate an existing batch:
 
 ```bash
 conda run -n lmas-trgc python scripts/aggregate_stage_b_artifacts.py --batch-dir results/runs/stage_b_batches/<batch_id> --group-by topology --group-by defense_name --json
+```
+
+Aggregate standard effect metrics:
+
+```bash
+conda run -n lmas-trgc python scripts/aggregate_standard_metrics.py --batch-dir results/runs/stage_b_batches/<batch_id> --group-by topology --group-by defense_name --json
+```
+
+## Judge and Standard Effect Metrics
+
+Step 9 adds a non-LLM judge layer and standard effect metrics for later paper tables.
+
+Judge modes:
+
+- `mock_protocol`: engineering validation for mock-only runs. It is marked `valid_for_paper=false` and must not be used as a formal paper result.
+- `rule_based`: deterministic rule-based scoring for future real LLM outputs.
+
+Standard metrics:
+
+- Clean TSR / Accuracy: task success under `attack_type=none`.
+- Robust TSR: task success under attack.
+- ASR: attack success rate under attack.
+- SVR: safety violation rate.
+- Benign Drop: clean no-defense baseline minus clean defended TSR.
+
+Current Stage-B batch defaults to `judge_mode=mock_protocol` and remains mock-only:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_batch.py --judge-mode mock_protocol --json
 ```
 
 ## Task Data Layer
@@ -311,6 +342,13 @@ Step 8 adds:
 - Batch-level run index, summary, aggregate metrics, README, and manifest files.
 - Pure-Python aggregation over saved Stage-B artifacts.
 
+Step 9 adds:
+
+- Rule-based and mock-protocol judge modes.
+- Standard effect metrics for Clean TSR, Robust TSR, ASR, SVR, and Benign Drop.
+- Optional judge outcome and standard metrics files in run artifacts.
+- Batch-level standard effect metric aggregation.
+
 ## Later Development
 
-Later stages will add dataset-backed pilot execution, real model execution modes, SV service integration, G-Safeguard adapter integration, matrix execution, aggregation, tables, and figures.
+Later stages will add dataset-backed pilot execution, real model execution modes, SV service integration, G-Safeguard adapter integration, main matrix execution, tables, and figures.

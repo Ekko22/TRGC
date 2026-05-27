@@ -7,6 +7,9 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from lmas_trgc.agents.prompt_builder import PromptBuilder
 from lmas_trgc.agents.roles import AgentProfile
 from lmas_trgc.analysis.batch_aggregate import aggregate_metrics, load_metrics_from_artifact_dirs, metrics_to_rows
+from lmas_trgc.analysis.effect_aggregate import aggregate_standard_metrics
+from lmas_trgc.analysis.run_summary import build_run_summary_record
+from lmas_trgc.analysis.standard_metrics import StandardRunMetrics, build_standard_run_metrics
 from lmas_trgc.attacks.manager import AttackManager
 from lmas_trgc.core.ids import stable_hash
 from lmas_trgc.defenses.factory import create_defense_adapter
@@ -14,6 +17,7 @@ from lmas_trgc.defenses.trgc.safety_verifier import SafetyVerifier
 from lmas_trgc.llm.mock_client import MockLLMClient
 from lmas_trgc.logging.artifact_writer import RunArtifactWriter
 from lmas_trgc.logging.batch_writer import StageBBatchWriter
+from lmas_trgc.judging.judge import create_judge
 from lmas_trgc.runners.protocol import ProtocolManager
 from lmas_trgc.runners.single_run import SingleRunConfig, SingleRunExecutor
 from lmas_trgc.tasks.anchors import build_task_packet
@@ -39,6 +43,7 @@ class StageBBatchConfig(BaseModel):
     max_steps: int | None = None
     seed: int = 20260527
     use_mock_llm: bool = True
+    judge_mode: str = "mock_protocol"
 
     @field_validator("datasets", "topologies", "attacks", "defenses")
     @classmethod
@@ -51,6 +56,8 @@ class StageBBatchConfig(BaseModel):
     def _validate_matrix(self) -> "StageBBatchConfig":
         if not self.use_mock_llm:
             raise ValueError("Stage-B batch is mock-only; use_mock_llm must be True")
+        if self.judge_mode not in {"mock_protocol", "rule_based"}:
+            raise ValueError("judge_mode must be mock_protocol or rule_based")
         invalid_topologies = sorted(set(self.topologies) - VALID_TOPOLOGIES)
         invalid_attacks = sorted(set(self.attacks) - VALID_ATTACKS)
         invalid_defenses = sorted(set(self.defenses) - VALID_DEFENSES)
@@ -72,8 +79,10 @@ class StageBBatchResult(BaseModel):
     artifact_dirs: list[str] = Field(default_factory=list)
     failures: list[dict] = Field(default_factory=list)
     aggregate_metrics_path: str | None = None
+    standard_effect_metrics_path: str | None = None
     run_index_path: str | None = None
     batch_dir: str | None = None
+    valid_for_paper_runs: int = 0
 
 
 class StageBBatchRunner:
@@ -114,7 +123,10 @@ class StageBBatchRunner:
         run_records: list[dict] = []
         failures: list[dict] = []
         artifact_dirs: list[str] = []
+        standard_metric_rows: list[dict] = []
+        standard_metric_records: list[StandardRunMetrics] = []
         total_runs = len(tasks) * len(config.topologies) * len(config.attacks) * len(config.defenses)
+        judge = create_judge(config.judge_mode)
 
         for task in tasks:
             task_packet = build_task_packet(task)
@@ -134,6 +146,12 @@ class StageBBatchRunner:
                             "completed": False,
                             "failed": False,
                             "error": None,
+                            "judge_mode": config.judge_mode,
+                            "valid_for_paper": None,
+                            "task_success": None,
+                            "attack_success": None,
+                            "safety_violation": None,
+                            "robust_success": None,
                         }
                         try:
                             defense_adapter = create_defense_adapter(
@@ -164,6 +182,9 @@ class StageBBatchRunner:
                                     max_steps=config.max_steps,
                                 ),
                             )
+                            judge_outcome = judge.judge(result, task_packet)
+                            run_summary = build_run_summary_record(result, task_packet)
+                            standard_metrics = build_standard_run_metrics(run_summary, judge_outcome)
                             manifest = artifact_writer.write_run_artifact(
                                 result,
                                 task_packet,
@@ -177,11 +198,21 @@ class StageBBatchRunner:
                                     "defense": defense,
                                     "max_steps": config.max_steps,
                                     "use_mock_llm": True,
+                                    "judge_mode": config.judge_mode,
                                 },
+                                judge_outcome=judge_outcome,
+                                standard_metrics=standard_metrics,
                             )
                             record["artifact_dir"] = manifest.artifact_dir
                             record["completed"] = result.completed
+                            record["valid_for_paper"] = judge_outcome.valid_for_paper
+                            record["task_success"] = judge_outcome.task_success
+                            record["attack_success"] = judge_outcome.attack_success
+                            record["safety_violation"] = judge_outcome.safety_violation
+                            record["robust_success"] = judge_outcome.robust_success
                             artifact_dirs.append(manifest.artifact_dir)
+                            standard_metric_records.append(standard_metrics)
+                            standard_metric_rows.append(standard_metrics.model_dump(mode="json"))
                         except Exception as exc:
                             record["failed"] = True
                             record["error"] = f"{type(exc).__name__}: {exc}"
@@ -203,11 +234,19 @@ class StageBBatchRunner:
             "topologies": config.topologies,
             "attacks": config.attacks,
             "defenses": config.defenses,
+            "judge_mode": config.judge_mode,
+            "valid_for_paper_runs": sum(1 for item in standard_metric_records if item.valid_for_paper),
         }
 
         run_index_path = batch_writer.write_run_index(batch_dir, run_records)
         batch_writer.write_batch_summary(batch_dir, summary)
         aggregate_json_path, _ = batch_writer.write_aggregate_metrics(batch_dir, aggregate, rows)
+        standard_effect = aggregate_standard_metrics(standard_metric_records)
+        standard_effect_json_path, _ = batch_writer.write_standard_effect_metrics(
+            batch_dir,
+            standard_effect,
+            standard_metric_rows,
+        )
         batch_writer.write_readme(batch_dir, summary)
         batch_writer.write_manifest(
             batch_dir,
@@ -216,6 +255,8 @@ class StageBBatchRunner:
                 "run_index": "run_index.jsonl",
                 "aggregate_metrics_json": "aggregate_metrics.json",
                 "aggregate_metrics_csv": "aggregate_metrics.csv",
+                "standard_effect_metrics_json": "standard_effect_metrics.json",
+                "standard_effect_metrics_csv": "standard_effect_metrics.csv",
                 "readme": "README.md",
             },
             metadata={"batch_id": config.batch_id, "schema": "stage_b_batch"},
@@ -230,6 +271,8 @@ class StageBBatchRunner:
             artifact_dirs=artifact_dirs,
             failures=failures,
             aggregate_metrics_path=str(aggregate_json_path),
+            standard_effect_metrics_path=str(standard_effect_json_path),
             run_index_path=str(run_index_path),
             batch_dir=str(batch_dir),
+            valid_for_paper_runs=summary["valid_for_paper_runs"],
         )

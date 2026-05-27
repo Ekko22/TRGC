@@ -58,6 +58,7 @@ class SingleRunResult(BaseModel):
     completed: bool
     final_agent: str
     final_context: str
+    final_output: str = ""
     message_events: list[MessageEvent]
     total_messages: int
     delivered_messages: int
@@ -121,6 +122,7 @@ class SingleRunExecutor:
 
         events: list[MessageEvent] = []
         parent_message_id: str | None = None
+        last_a7_delivery_content: str | None = None
         for step_id, protocol_edge in self.protocol_manager.iter_edges(config.topology):
             if config.max_steps is not None and step_id > config.max_steps:
                 continue
@@ -176,6 +178,8 @@ class SingleRunExecutor:
                 self._context_content(result, routed_message.content),
                 routed_message.message_id,
             )
+            if result.delivered and protocol_edge.receiver == "A7":
+                last_a7_delivery_content = routed_message.content
             events.append(
                 MessageEvent(
                     step_id=step_id,
@@ -202,6 +206,7 @@ class SingleRunExecutor:
         downweighted = sum(1 for event in events if event.downweighted)
         rerouted = sum(1 for event in events if event.rerouted_to_sv)
         attacked = sum(1 for event in events if event.attack_injected)
+        final_context = context_store.render_context("A7")
         return SingleRunResult(
             run_id=config.run_id,
             task_id=task_packet.task.task_id,
@@ -210,7 +215,8 @@ class SingleRunExecutor:
             defense_name=config.defense_name,
             completed=True,
             final_agent="A7",
-            final_context=context_store.render_context("A7"),
+            final_context=final_context,
+            final_output=last_a7_delivery_content or final_context,
             message_events=events,
             total_messages=len(events),
             delivered_messages=delivered,

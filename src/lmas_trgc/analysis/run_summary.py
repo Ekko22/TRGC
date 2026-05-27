@@ -34,9 +34,11 @@ def build_run_summary_record(
         rerouted_messages=result.rerouted_messages,
         attacked_messages=result.attacked_messages,
         final_context_hash=stable_hash(result.final_context, length=24),
+        final_output_hash=stable_hash(result.final_output or result.final_context, length=24),
         created_at=created_at or _created_at(),
         metadata={
             "final_context_chars": len(result.final_context),
+            "final_output_chars": len(result.final_output or result.final_context),
             "message_event_count": len(result.message_events),
         },
     )
