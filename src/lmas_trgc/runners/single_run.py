@@ -6,6 +6,7 @@ from lmas_trgc.agents.agent_runtime import AgentRuntime
 from lmas_trgc.agents.context import AgentContextStore
 from lmas_trgc.agents.prompt_builder import PromptBuilder
 from lmas_trgc.agents.roles import AgentProfile, get_agent_profile
+from lmas_trgc.attacks.manager import AttackManager
 from lmas_trgc.communication.router import MessageRouter, RouteResult
 from lmas_trgc.core.enums import GateAction
 from lmas_trgc.defenses.base import DefenseAdapter
@@ -40,6 +41,9 @@ class MessageEvent(BaseModel):
     blocked: bool
     downweighted: bool
     rerouted_to_sv: bool
+    attack_injected: bool = False
+    attack_type: str | None = None
+    attack_changed_fields: list[str] = Field(default_factory=list)
     reason: str | None = None
     route_meta: dict = Field(default_factory=dict)
 
@@ -59,6 +63,7 @@ class SingleRunResult(BaseModel):
     blocked_messages: int
     downweighted_messages: int
     rerouted_messages: int
+    attacked_messages: int
 
 
 class SingleRunExecutor:
@@ -70,6 +75,7 @@ class SingleRunExecutor:
         defense_adapter: DefenseAdapter,
         llm_clients_by_agent: dict[str, MockLLMClient | OpenAICompatibleClient],
         prompt_builder: PromptBuilder,
+        attack_manager: AttackManager | None = None,
     ) -> None:
         self.topology_manager = topology_manager
         self.protocol_manager = protocol_manager
@@ -77,6 +83,7 @@ class SingleRunExecutor:
         self.defense_adapter = defense_adapter
         self.llm_clients_by_agent = llm_clients_by_agent
         self.prompt_builder = prompt_builder
+        self.attack_manager = attack_manager
 
     def _bucket_for_result(self, result: RouteResult) -> str:
         if result.gate_action == GateAction.ALLOW:
@@ -123,42 +130,64 @@ class SingleRunExecutor:
                 parent_message_id=parent_message_id,
                 protocol_purpose=protocol_edge.purpose,
             )
+            preliminary_route_meta = {
+                "topology": config.topology,
+                "edge": f"{message.sender}->{message.receiver}",
+                "sender": message.sender,
+                "receiver": message.receiver,
+                "edge_allowed": self.topology_manager.is_allowed_edge(config.topology, message.sender, message.receiver),
+                "fanout_count": self.topology_manager.fanout_count(config.topology, message.receiver),
+                "critical_nodes_reachable": self.topology_manager.critical_nodes_reachable(config.topology, message.receiver),
+                "is_forwarded_path": message.is_forwarded,
+            }
+            attack_result = None
+            routed_message = message
+            if self.attack_manager is not None:
+                routed_message, attack_result = self.attack_manager.apply_attack_if_needed(
+                    message,
+                    preliminary_route_meta,
+                    task_packet,
+                )
             result = router.route(
-                message,
+                routed_message,
                 topology=config.topology,
                 source_model=self.llm_clients_by_agent[protocol_edge.sender].list_models()[0],
-                injected_by_attack=False,
+                injected_by_attack=attack_result.attacked if attack_result else False,
                 attack_type=config.attack_type,
             )
             bucket = self._bucket_for_result(result)
             context_store.add_message(
                 protocol_edge.receiver,
                 bucket,
-                self._context_content(result, message.content),
-                message.message_id,
+                self._context_content(result, routed_message.content),
+                routed_message.message_id,
             )
             events.append(
                 MessageEvent(
                     step_id=step_id,
                     sender=protocol_edge.sender,
                     receiver=protocol_edge.receiver,
-                    message_id=message.message_id,
+                    message_id=routed_message.message_id,
                     delivered=result.delivered,
                     gate_action=str(result.gate_action.value),
                     context_bucket=bucket,
                     blocked=result.blocked,
                     downweighted=result.downweighted,
                     rerouted_to_sv=result.rerouted_to_sv,
+                    attack_injected=attack_result.attacked if attack_result else False,
+                    attack_type=attack_result.attack_type if attack_result and attack_result.attacked else None,
+                    attack_changed_fields=attack_result.changed_fields if attack_result else [],
                     reason=result.reason,
                     route_meta=result.route_meta,
                 )
             )
-            parent_message_id = message.message_id
+            parent_message_id = routed_message.message_id
 
         delivered = sum(1 for event in events if event.delivered)
         blocked = sum(1 for event in events if event.blocked)
         downweighted = sum(1 for event in events if event.downweighted)
         rerouted = sum(1 for event in events if event.rerouted_to_sv)
+        attacked = sum(1 for event in events if event.attack_injected)
         return SingleRunResult(
             run_id=config.run_id,
             task_id=task_packet.task.task_id,
@@ -174,4 +203,5 @@ class SingleRunExecutor:
             blocked_messages=blocked,
             downweighted_messages=downweighted,
             rerouted_messages=rerouted,
+            attacked_messages=attacked,
         )

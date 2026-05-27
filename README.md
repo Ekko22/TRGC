@@ -107,6 +107,32 @@ conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology graph --de
 conda run -n lmas-trgc python scripts/run_stage_a_smoke.py --topology tree --defense trgc --json
 ```
 
+## Communication Attacks
+
+Step 6 adds a communication-layer attack manager. Attacks are not agents, do not enter topology or protocol, and do not change the true transport sender recorded by the router. They occur after `AgentRuntime` generates an `AgentMessage` and before `MessageRouter` applies topology and defense checks.
+
+Supported attacks:
+
+- Message Poisoning.
+- Role Impersonation.
+- Relay Injection.
+
+Stage-B pilot uses `MockLLMClient` only and does not call real LLMs or external services.
+
+Run one Stage-B pilot:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_pilot.py --topology graph --attack message_poisoning --defense trgc --json
+```
+
+Run the three attack smoke checks:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_pilot.py --topology graph --attack message_poisoning --defense trgc --json
+conda run -n lmas-trgc python scripts/run_stage_b_pilot.py --topology graph --attack role_impersonation --defense trgc --json
+conda run -n lmas-trgc python scripts/run_stage_b_pilot.py --topology graph --attack relay_injection --defense trgc --json
+```
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
@@ -203,6 +229,13 @@ Step 5 adds:
 - SingleRunExecutor that routes every protocol message through MessageRouter and DefenseAdapter.
 - Stage-A smoke runner for 7-agent mock execution.
 
+Step 6 adds:
+
+- AttackManager and independent communication attack strategies.
+- Domain-aware attack payload templates for message poisoning, role impersonation, and relay injection.
+- Attack targeting rules for high-value receivers, graph direct-to-finalizer edges, chain middle edges, and tree branch summaries.
+- Stage-B pilot runner for mock-only attack injection smoke tests.
+
 ## Later Development
 
-Later stages will add attack payload implementations, real model execution modes, SV service integration, G-Safeguard adapter integration, matrix execution, aggregation, tables, and figures.
+Later stages will add real model execution modes, SV service integration, G-Safeguard adapter integration, matrix execution, aggregation, tables, and figures.

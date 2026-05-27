@@ -1,0 +1,37 @@
+critical_receivers:
+  - A1
+  - A6
+  - A7
+
+chain_middle_edges:
+  - [A3, A4]
+  - [A4, A5]
+  - [A5, A6]
+
+graph_direct_to_finalizer:
+  - [A3, A7]
+  - [A4, A7]
+
+tree_branch_summary_edges:
+  - [A2, A1]
+  - [A6, A1]
+
+preferred_domain_slots:
+  math_reasoning:
+    - numeric
+  logic_reasoning:
+    - logic_rule
+  knowledge_reasoning:
+    - expected_answer
+  commonsense_reasoning:
+    - expected_answer
+  code:
+    - code_spec
+  constraints:
+    - forbidden_action
+    - permission
+    - constraint
+  local_mas_safety:
+    - forbidden_action
+    - safety_requirement
+    - allowed_action
