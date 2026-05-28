@@ -350,6 +350,14 @@ Step 13 runs a DeepSeek diagnostic pilot over `main_v2_104`. It uses 22 tasks, s
 conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --confirm-real-llm --batch-id stage_c_deepseek_diag_graph_mp_22x4 --tasks-per-dataset 2 --topologies graph --attacks none,message_poisoning --defenses no_defense,simple_content_guardrail,full_checking_light,trgc --max-steps 3 --max-workers 16 --sv-mode client --overwrite --json
 ```
 
+Step 14 audits the completed Step 13 artifacts without calling any LLM or network service. The root-cause diagnostic script reads local run artifacts, summarizes clean baseline failures, judge extraction signals, attack effectiveness, TRGC action paths, defense comparisons, and likely missing SV cost instrumentation.
+
+```bash
+conda run -n lmas-trgc python scripts/diagnose_deepseek_pilot.py --batch-dir results/runs/stage_c_manifest_batches/stage_c_deepseek_diag_graph_mp_22x4 --json
+```
+
+The script writes a local JSON audit to `data/manifests/deepseek_diagnostic_audit.json` and a Markdown report to `docs/dev_logs/0020_deepseek_diagnostic_root_cause.md`. The JSON audit and run artifacts are not committed.
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
