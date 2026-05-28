@@ -7,7 +7,7 @@ from lmas_trgc.tasks.loader import save_tasks_to_jsonl
 from lmas_trgc.tasks.registry import get_default_dataset_specs
 from lmas_trgc.tasks.schema import TaskRecord
 
-PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+PUBLIC_DATASETS = ["gsm8k", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 
 
 def _fake_task(dataset: str, index: int) -> TaskRecord:
@@ -60,7 +60,7 @@ def test_build_manifest_require_full_succeeds_with_all_fake_public_data(tmp_path
     )
     assert completed.returncode == 0, completed.stderr or completed.stdout
     payload = json.loads(completed.stdout)
-    assert payload["total_tasks"] == 104
+    assert payload["total_tasks"] == 96
     expected = {dataset: 8 for dataset in PUBLIC_DATASETS}
     expected.update({"constraint_miniset": 16, "local_mas_safety": 16})
     assert payload["dataset_counts"] == expected

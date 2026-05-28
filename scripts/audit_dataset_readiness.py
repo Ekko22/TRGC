@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from lmas_trgc.tasks.loader import load_tasks_from_jsonl
 from lmas_trgc.tasks.registry import get_default_dataset_specs
 
-PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+PUBLIC_DATASETS = ["gsm8k", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 SYNTHETIC_DATASETS = ["constraint_miniset", "local_mas_safety"]
 
 
@@ -69,7 +69,7 @@ def audit_datasets(
     can_build_full = (
         public_ready == len(PUBLIC_DATASETS)
         and synthetic_ready == len(SYNTHETIC_DATASETS)
-        and total_available >= 104
+        and total_available >= 96
     )
     return {
         "datasets": records,
@@ -82,7 +82,7 @@ def audit_datasets(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Audit local dataset readiness for the 104-task main manifest.")
+    parser = argparse.ArgumentParser(description="Audit local dataset readiness for the 96-task main manifest.")
     parser.add_argument("--processed-public-dir", default="data/processed/public")
     parser.add_argument("--synthetic-dir", default="data/processed/synthetic")
     parser.add_argument("--json", action="store_true")

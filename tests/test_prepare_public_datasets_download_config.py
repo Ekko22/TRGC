@@ -70,11 +70,11 @@ def test_prepare_hf_candidates_fallback(tmp_path):
         calls.append(path)
         if len(calls) == 1:
             raise RuntimeError("candidate failed")
-        return [{"question": "Is A true?", "answer": "yes"}]
+        return [{"Body": "A has 2.", "Question": "Adds 3?", "Answer": 5}]
 
     record = prepare_one_dataset(
-        dataset="prontoqa",
-        spec=get_default_dataset_specs()["prontoqa"],
+        dataset="svamp",
+        spec=get_default_dataset_specs()["svamp"],
         output_dir=tmp_path,
         overwrite=True,
         allow_download=True,

@@ -18,7 +18,7 @@ from lmas_trgc.tasks.loader import load_raw_json_or_jsonl, save_public_tasks
 from lmas_trgc.tasks.public_adapters import convert_public_items
 from lmas_trgc.tasks.registry import DatasetSpec, get_default_dataset_specs
 
-PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+PUBLIC_DATASETS = ["gsm8k", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 
 
 def _selected_datasets(name: str) -> list[str]:

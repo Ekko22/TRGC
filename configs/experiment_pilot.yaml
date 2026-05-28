@@ -1,6 +1,6 @@
 stage: pilot
-num_tasks_placeholder: 22
-pilot_task_count: 22
+num_tasks_placeholder: 20
+pilot_task_count: 20
 sampling_strategy: first_two_per_dataset_if_available
 topologies:
   - star

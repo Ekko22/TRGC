@@ -82,5 +82,5 @@ def test_manifest_with_public_gsm8k_and_synthetic_reaches_40(tmp_path):
     manifest = build_task_manifest(selection.selected_tasks, manifest_id="with_public", missing_datasets=selection.missing_datasets)
     assert manifest.total_tasks >= 40
     assert manifest.dataset_counts["gsm8k"] == 8
-    assert "prontoqa" in manifest.missing_datasets
+    assert "mmlu" in manifest.missing_datasets
     assert "prompt" not in str(manifest.model_dump()["entries"])

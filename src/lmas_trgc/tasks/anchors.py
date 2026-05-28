@@ -124,7 +124,6 @@ def build_answer_contract(task: TaskRecord) -> dict:
         "multiarith": "exact_match",
         "mmlu": "accuracy",
         "csqa": "accuracy",
-        "prontoqa": "accuracy",
         "aqua": "accuracy",
         "humaneval": "pass_at_1_or_review_accuracy",
         "mbpp": "pass_at_1_or_review_accuracy",

@@ -5,8 +5,8 @@ from lmas_trgc.tasks.registry import get_dataset_spec, list_dataset_names, total
 
 def test_dataset_registry_shape():
     names = list_dataset_names()
-    assert len(names) == 11
-    assert total_target_main_count() == 104
+    assert len(names) == 10
+    assert total_target_main_count() == 96
 
 
 def test_specific_target_counts():

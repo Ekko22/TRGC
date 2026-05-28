@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from lmas_trgc.tasks.registry import get_default_dataset_specs
 
-PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+PUBLIC_DATASETS = ["gsm8k", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 
 
 RAW_SCHEMAS: dict[str, dict] = {
@@ -18,11 +18,6 @@ RAW_SCHEMAS: dict[str, dict] = {
         "accepted_fields": ["question", "answer", "prompt", "response", "final_answer"],
         "minimal_required_fields": ["question or prompt", "answer or response or final_answer"],
         "example_json_line": {"question": "What is 40 + 2?", "answer": "Reasoning #### 42"},
-    },
-    "prontoqa": {
-        "accepted_fields": ["question", "query", "prompt", "answer", "label", "target"],
-        "minimal_required_fields": ["question or query or prompt", "answer or label or target"],
-        "example_json_line": {"question": "If A implies B and A is true, is B true?", "answer": "yes"},
     },
     "mmlu": {
         "accepted_fields": ["question", "choices", "answer", "subject", "A", "B", "C", "D", "E"],

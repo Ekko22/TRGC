@@ -26,36 +26,6 @@ datasets:
       - data/raw/public/gsm8k.jsonl
       - data/raw/public/gsm8k.json
 
-  prontoqa:
-    name: prontoqa
-    domain: logic_reasoning
-    source_type: hf_or_local
-    default_split: test
-    target_main_count: 8
-    metric: accuracy
-    description: Logic reasoning tasks from local raw files or configured HF candidates.
-    local_path: data/processed/public/prontoqa.jsonl
-    processed_path: data/processed/public/prontoqa.jsonl
-    hf_path: EleutherAI/prontoqa
-    hf_config:
-    hf_split: test
-    primary_hf_path: EleutherAI/prontoqa
-    primary_hf_config:
-    primary_hf_split: test
-    hf_candidates:
-      - path: EleutherAI/prontoqa
-        config:
-        split: test
-      - path: tasksource/prontoqa
-        config:
-        split: test
-      - path: prontoqa
-        config:
-        split: test
-    local_raw_candidates:
-      - data/raw/public/prontoqa.jsonl
-      - data/raw/public/prontoqa.json
-
   mmlu:
     name: mmlu
     domain: knowledge_reasoning

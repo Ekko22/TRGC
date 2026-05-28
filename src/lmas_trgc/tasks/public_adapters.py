@@ -68,21 +68,6 @@ def convert_gsm8k_item(item: dict, index: int, split: str = "test") -> TaskRecor
     )
 
 
-def convert_prontoqa_item(item: dict, index: int, split: str = "test") -> TaskRecord:
-    prompt = normalize_text(item.get("question") or item.get("query") or item.get("prompt"))
-    gold = item.get("answer", item.get("label", item.get("target")))
-    return _record(
-        dataset="prontoqa",
-        domain="logic_reasoning",
-        index=index,
-        split=split,
-        prompt=prompt,
-        gold_answer=gold,
-        metadata=compact_metadata(item, ["query", "target", "label", "answer"]),
-        available_fields=sorted(item),
-    )
-
-
 def convert_mmlu_item(item: dict, index: int, split: str = "test") -> TaskRecord:
     choices = normalize_choices(
         item.get("choices") or [item.get(label) for label in ["A", "B", "C", "D", "E"] if item.get(label)]
@@ -205,7 +190,6 @@ def convert_mbpp_item(item: dict, index: int, split: str = "test") -> TaskRecord
 
 CONVERTERS: dict[str, Callable[[dict, int, str], TaskRecord]] = {
     "gsm8k": convert_gsm8k_item,
-    "prontoqa": convert_prontoqa_item,
     "mmlu": convert_mmlu_item,
     "csqa": convert_csqa_item,
     "svamp": convert_svamp_item,

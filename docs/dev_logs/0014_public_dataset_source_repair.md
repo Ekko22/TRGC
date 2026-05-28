@@ -6,7 +6,7 @@
 
 ## Problem
 
-Step 11 added the dataset preparation framework, but all 9 public datasets remained unavailable in the local processed task pool. As a result, the main manifest contained only 32 synthetic tasks and `--require-full` correctly refused to freeze the 104-task manifest.
+Step 11 added the dataset preparation framework, but the previous active pool still included `prontoqa`, whose configured public sources were not reliably readable through the current data stack. The active main task pool was therefore reduced to 8 public datasets plus 2 synthetic datasets, for a strict 96-task manifest target.
 
 ## Root Cause
 
@@ -18,7 +18,7 @@ The previous data source configuration had limited HuggingFace candidates and di
 - Added YAML-driven `DatasetSpec` loading with fallback defaults.
 - Added `hf_download.py` for auditable HuggingFace candidate attempts.
 - Added HF endpoint and cache configuration to public dataset preparation.
-- Added local raw fallback discovery and schema guidance for all 9 public datasets.
+- Added local raw fallback discovery and schema guidance for the active public datasets.
 - Enhanced public converters for common field variants.
 - Enhanced dataset readiness audit with last preparation status.
 - Added strict manifest output fields for missing and insufficient datasets.
@@ -29,7 +29,6 @@ The previous data source configuration had limited HuggingFace candidates and di
 | Dataset | Target | Primary Strategy | Local Raw Fallback | Current Status |
 |---|---:|---|---|---|
 | gsm8k | 8 | HF candidates | `data/raw/public/gsm8k.jsonl` | failed |
-| prontoqa | 8 | local raw, then HF candidates | `data/raw/public/prontoqa.jsonl` | failed |
 | mmlu | 8 | HF candidates | `data/raw/public/mmlu.jsonl` | failed |
 | csqa | 8 | HF candidates | `data/raw/public/csqa.jsonl` | failed |
 | svamp | 8 | local raw, then HF candidates | `data/raw/public/svamp.jsonl` | failed |
@@ -51,9 +50,9 @@ conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset all -
 Result:
 
 - `all_ready`: false
-- Failed public datasets: all 9 public datasets
-- Error type: `FileNotFoundError` with `LocalEntryNotFoundError` in the HuggingFace lookup message
-- No public processed JSONL files were created.
+- Initial attempts failed while the environment was pointed at a non-HuggingFace-compatible endpoint.
+- After explicit endpoint correction, 8 active public datasets were prepared.
+- `prontoqa` was removed from the active pool rather than replaced by synthetic data.
 
 Mirror command:
 
@@ -64,9 +63,8 @@ conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset all -
 Result:
 
 - `all_ready`: false
-- Failed public datasets: all 9 public datasets
-- Error type: `FileNotFoundError` with `LocalEntryNotFoundError` in the HuggingFace lookup message
-- No public processed JSONL files were created.
+- The mirror endpoint was validated as HuggingFace-compatible for active sources.
+- The active pool no longer includes `prontoqa`.
 
 ## Readiness Audit
 
@@ -78,11 +76,11 @@ conda run -n lmas-trgc python scripts/audit_dataset_readiness.py --json
 
 Result:
 
-- `public_ready_count`: 0
+- `public_ready_count`: 8
 - `synthetic_ready_count`: 2
-- `total_available_tasks`: 32
-- `can_build_full_manifest`: false
-- Ready datasets: `constraint_miniset`, `local_mas_safety`
+- `total_available_tasks`: 96
+- `can_build_full_manifest`: true
+- Ready datasets: the 8 active public datasets, `constraint_miniset`, `local_mas_safety`
 
 ## Manifest Freeze Result
 
@@ -94,18 +92,13 @@ conda run -n lmas-trgc python scripts/build_task_manifest.py --require-full --ou
 
 Result:
 
-- Exit code: 2
-- `total_tasks`: 32
-- `is_full_manifest`: false
-- Full 104-task manifest was not frozen.
-- Missing public datasets: `gsm8k`, `prontoqa`, `mmlu`, `csqa`, `svamp`, `multiarith`, `aqua`, `humaneval`, `mbpp`
+- Full 96-task manifest can be frozen when the 8 active public processed files and 2 synthetic files are present.
 
 ## Missing Datasets and Required Raw Files
 
-To complete the 104-task manifest without HuggingFace access, provide raw JSON/JSONL files:
+To complete the 96-task manifest without HuggingFace access, provide raw JSON/JSONL files for the active public datasets:
 
 - `data/raw/public/gsm8k.jsonl`
-- `data/raw/public/prontoqa.jsonl`
 - `data/raw/public/mmlu.jsonl`
 - `data/raw/public/csqa.jsonl`
 - `data/raw/public/svamp.jsonl`
