@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import re
 
 from lmas_trgc.tasks.normalizers import (
     compact_metadata,
@@ -42,6 +43,20 @@ def _record(
         source="public",
         metadata=metadata or {},
     )
+
+
+def _extract_lettered_choices_from_text(text: str) -> list[str]:
+    matches = list(re.finditer(r"(?<![A-Za-z0-9])([A-E])[\).:]\s*", text))
+    if len(matches) < 2:
+        return []
+    choices: list[str] = []
+    for index, match in enumerate(matches):
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        value = normalize_text(text[start:end])
+        if value:
+            choices.append(f"{match.group(1).upper()}. {value}")
+    return choices
 
 
 def convert_gsm8k_item(item: dict, index: int, split: str = "test") -> TaskRecord:
@@ -142,14 +157,18 @@ def convert_multiarith_item(item: dict, index: int, split: str = "test") -> Task
 
 def convert_aqua_item(item: dict, index: int, split: str = "test") -> TaskRecord:
     prompt = normalize_text(item.get("question") or item.get("prompt"))
+    option_fields = [item.get(label) for label in ["A", "B", "C", "D", "E"] if item.get(label)]
+    choices = normalize_choices(item.get("options") or item.get("choices") or option_fields)
+    if len(choices) < 2:
+        choices = _extract_lettered_choices_from_text(prompt)
     return _record(
         dataset="aqua",
         domain="math_reasoning",
         index=index,
         split=split,
         prompt=prompt,
-        gold_answer=item.get("correct", item.get("answer", item.get("completion"))),
-        choices=normalize_choices(item.get("options") or item.get("choices")),
+        gold_answer=item.get("correct", item.get("answer", item.get("completion", item.get("gold_answer")))),
+        choices=choices,
         metadata=compact_metadata(item, ["rationale", "completion"], max_value_chars=500),
         available_fields=sorted(item),
     )

@@ -1,6 +1,7 @@
 import pytest
 
 from lmas_trgc.tasks.public_adapters import (
+    convert_aqua_item,
     convert_csqa_item,
     convert_gsm8k_item,
     convert_humaneval_item,
@@ -44,6 +45,19 @@ def test_convert_svamp_combines_body_and_question():
     assert "A has 2." in task.prompt
     assert "Adds 3?" in task.prompt
     assert task.gold_answer == "5"
+
+
+def test_convert_aqua_extracts_embedded_letter_choices():
+    task = convert_aqua_item(
+        {
+            "question": "Pick the number. A)12 B)24 C)42 D)48 E)49",
+            "correct": "C",
+        },
+        0,
+    )
+    assert task.gold_answer == "C"
+    assert len(task.choices) == 5
+    assert task.choices[0] == "A. 12"
 
 
 def test_convert_humaneval_metadata():
