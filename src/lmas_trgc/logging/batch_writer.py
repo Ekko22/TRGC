@@ -43,12 +43,18 @@ def _csv_value(value: Any) -> Any:
 
 
 class StageBBatchWriter:
-    def __init__(self, output_root: str | Path, overwrite: bool = False) -> None:
+    def __init__(
+        self,
+        output_root: str | Path,
+        overwrite: bool = False,
+        batch_stage_name: str = "stage_b_batches",
+    ) -> None:
         self.output_root = Path(output_root)
         self.overwrite = overwrite
+        self.batch_stage_name = batch_stage_name
 
     def make_batch_dir(self, batch_id: str) -> Path:
-        batch_dir = self.output_root / "stage_b_batches" / batch_id
+        batch_dir = self.output_root / self.batch_stage_name / batch_id
         if batch_dir.exists():
             if not self.overwrite:
                 raise FileExistsError(f"batch artifact already exists: {batch_dir}")

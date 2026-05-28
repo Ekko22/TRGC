@@ -36,6 +36,10 @@ def aggregate_metrics(metrics: list[MetricsRecord]) -> dict:
         "total_blocked_messages": sum(item.blocked_messages for item in metrics),
         "total_downweighted_messages": sum(item.downweighted_messages for item in metrics),
         "total_rerouted_messages": sum(item.rerouted_messages for item in metrics),
+        "total_llm_calls": sum(item.total_llm_calls for item in metrics),
+        "total_input_tokens": sum(item.total_input_tokens for item in metrics),
+        "total_output_tokens": sum(item.total_output_tokens for item in metrics),
+        "total_tokens": sum(item.total_tokens for item in metrics),
     }
 
 
@@ -54,6 +58,8 @@ def metrics_to_rows(metrics: list[MetricsRecord]) -> list[dict]:
             "block_rate": item.block_rate,
             "critical_node_reach_rate": item.critical_node_reach_rate,
             "propagation_depth_proxy": item.propagation_depth_proxy,
+            "total_llm_calls": item.total_llm_calls,
+            "total_tokens": item.total_tokens,
         }
         for item in metrics
     ]

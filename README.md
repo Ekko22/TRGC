@@ -259,6 +259,50 @@ The smoke validates the DeepSeek API path, 7-agent runtime, communication attack
 
 Step 10A real DeepSeek smoke was successfully executed with explicit `--confirm-real-llm`. The smoke used `max_steps=2`, graph topology, message poisoning, TRGC, and SV client mode. It validated the real DeepSeek task-model path, local SV client path, TRGC defense, artifact writing, judge, and usage tracking. This is an engineering validation run, not a paper result.
 
+## DeepSeek Manifest Pilot
+
+Step 12 adds an opt-in Stage-C manifest pilot over `main_v2_104`. It selects one task per active dataset by default, so the default pilot covers all 11 datasets, including ProntoQA, and runs 22 real-model runs:
+
+- 11 selected tasks.
+- Graph topology.
+- Message Poisoning attack.
+- No Defense and TRGC.
+- DeepSeek M1 mapped to all A1-A7 task agents.
+- SV client mode by default.
+- `max_steps=3` to reach Graph direct-to-finalizer and other high-value attack edges.
+
+This pilot is a real-data, real-DeepSeek engineering validation for the manifest, attack, defense, judge, artifact, and usage-tracking path. It is not the 8320-run main experiment and is not a paper result. It never calls a real LLM unless `--confirm-real-llm` is supplied.
+
+Dry-run without network calls:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --dry-run --json
+```
+
+Configuration check without chat calls:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --check-config-only --json
+```
+
+Default real pilot:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --confirm-real-llm --overwrite --json
+```
+
+Optional mock SV fallback:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --confirm-real-llm --allow-sv-mock-fallback --overwrite --json
+```
+
+Aggregate a completed pilot batch:
+
+```bash
+conda run -n lmas-trgc python scripts/aggregate_stage_c_manifest_pilot.py --batch-dir results/runs/stage_c_manifest_batches/<batch_id> --group-by dataset --group-by defense_name --json
+```
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
