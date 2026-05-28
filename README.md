@@ -325,6 +325,17 @@ Aggregate a completed pilot batch:
 conda run -n lmas-trgc python scripts/aggregate_stage_c_manifest_pilot.py --batch-dir results/runs/stage_c_manifest_batches/<batch_id> --group-by dataset --group-by defense_name --json
 ```
 
+Step 12C runs a parallel DeepSeek manifest pilot over `main_v2_104`. The default clean pilot is:
+
+- 11 datasets x 1 task x graph x message_poisoning x no_defense/trgc = 22 runs.
+- Recommended real-LLM concurrency: `--max-workers 2`.
+- Engineering pilot only; not a paper result.
+- Results are stored under `results/runs/stage_c_manifest_batches/<batch_id>/` and are not committed.
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --confirm-real-llm --batch-id stage_c_manifest_parallel_clean_22 --tasks-per-dataset 1 --topologies graph --attacks message_poisoning --defenses no_defense,trgc --max-steps 3 --max-workers 2 --sv-mode client --overwrite --json
+```
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
