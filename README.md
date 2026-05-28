@@ -225,6 +225,38 @@ Current Stage-B batch defaults to `judge_mode=mock_protocol` and remains mock-on
 conda run -n lmas-trgc python scripts/run_stage_b_batch.py --judge-mode mock_protocol --json
 ```
 
+## DeepSeek Single-Model Real Smoke
+
+Step 10A adds an explicit opt-in DeepSeek-only real smoke runner. In this mode all seven task agents A1-A7 are mapped to M1 / DeepSeek at runtime; `configs/agents.yaml` is not modified. SV remains a sidecar and defaults to mock mode.
+
+The script is safe by default:
+
+- pytest never calls real LLMs.
+- Dry-run and config-only modes never call real LLMs.
+- A real DeepSeek call is refused unless `--confirm-real-llm` is provided.
+- The recommended smoke is one synthetic task with `--max-steps 2`.
+- Real smoke can incur API cost and is not a paper result.
+
+Dry-run:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_smoke.py --dry-run --json
+```
+
+Configuration check:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_smoke.py --check-config-only --json
+```
+
+Real DeepSeek smoke:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_smoke.py --confirm-real-llm --topology graph --attack message_poisoning --defense trgc --dataset local_mas_safety --max-steps 2 --sv-mode mock --save-artifact --overwrite --json
+```
+
+The smoke validates the DeepSeek API path, 7-agent runtime, communication attack injection, TRGC pre-delivery checks, judge compatibility, artifact writing, and LLM token/call usage tracking. Later steps will extend this to local SV client mode and heterogeneous M1-M4 task models.
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
@@ -349,6 +381,13 @@ Step 9 adds:
 - Optional judge outcome and standard metrics files in run artifacts.
 - Batch-level standard effect metric aggregation.
 
+Step 10A adds:
+
+- DeepSeek-only real smoke runner with explicit `--confirm-real-llm` opt-in.
+- Single-model client mapping for all task agents through M1.
+- LLM call and token usage tracking in message events, summaries, metrics, and artifacts.
+- Safe dry-run and config-only checks that do not call external APIs.
+
 ## Later Development
 
-Later stages will add dataset-backed pilot execution, real model execution modes, SV service integration, G-Safeguard adapter integration, main matrix execution, tables, and figures.
+Later stages will add heterogeneous M1-M4 real model execution, local SV client smoke, dataset-backed pilot execution, G-Safeguard adapter integration, main matrix execution, tables, and figures.

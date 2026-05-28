@@ -12,6 +12,7 @@ from lmas_trgc.core.enums import GateAction
 from lmas_trgc.defenses.base import DefenseAdapter
 from lmas_trgc.llm.client import OpenAICompatibleClient
 from lmas_trgc.llm.mock_client import MockLLMClient
+from lmas_trgc.llm.usage import LLMUsageRecord, merge_usage_records
 from lmas_trgc.runners.protocol import ProtocolManager
 from lmas_trgc.tasks.schema import TaskPacket
 from lmas_trgc.topology.exposure import estimate_topology_exposure
@@ -47,6 +48,10 @@ class MessageEvent(BaseModel):
     attack_changed_fields: list[str] = Field(default_factory=list)
     reason: str | None = None
     route_meta: dict = Field(default_factory=dict)
+    source_model: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
 
 class SingleRunResult(BaseModel):
@@ -66,6 +71,11 @@ class SingleRunResult(BaseModel):
     downweighted_messages: int
     rerouted_messages: int
     attacked_messages: int
+    total_llm_calls: int = 0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_tokens: int = 0
+    model_usage: dict = Field(default_factory=dict)
 
 
 class SingleRunExecutor:
@@ -108,6 +118,9 @@ class SingleRunExecutor:
             return f"[Safety Notice] A message required verifier review before delivery. Reason: {result.reason or 'unspecified'}"
         return content
 
+    def _source_model_for_client(self, client: MockLLMClient | OpenAICompatibleClient) -> str | None:
+        return getattr(client, "model_name", None)
+
     def run(self, task_packet: TaskPacket, config: SingleRunConfig) -> SingleRunResult:
         router = MessageRouter(self.topology_manager, self.defense_adapter)
         context_store = AgentContextStore(list(self.agent_profiles))
@@ -121,6 +134,7 @@ class SingleRunExecutor:
         }
 
         events: list[MessageEvent] = []
+        usage_records: list[LLMUsageRecord] = []
         parent_message_id: str | None = None
         last_a7_delivery_content: str | None = None
         for step_id, protocol_edge in self.protocol_manager.iter_edges(config.topology):
@@ -163,10 +177,26 @@ class SingleRunExecutor:
             attack_injected = bool(attack_result and attack_result.attacked)
             effective_attack_type = attack_result.attack_type if attack_injected else None
             attack_changed_fields = attack_result.changed_fields if attack_injected else []
+            usage_meta = routed_message.metadata.get("llm_usage", {})
+            source_model = usage_meta.get("model") or self._source_model_for_client(self.llm_clients_by_agent[protocol_edge.sender])
+            input_tokens = int(usage_meta.get("input_tokens") or 0)
+            output_tokens = int(usage_meta.get("output_tokens") or 0)
+            total_tokens = int(usage_meta.get("total_tokens") or input_tokens + output_tokens)
+            call_count = int(usage_meta.get("call_count") or 0)
+            usage_records.append(
+                LLMUsageRecord(
+                    agent_id=protocol_edge.sender,
+                    model_name=source_model,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=total_tokens,
+                    call_count=call_count,
+                )
+            )
             result = router.route(
                 routed_message,
                 topology=config.topology,
-                source_model=self.llm_clients_by_agent[protocol_edge.sender].list_models()[0],
+                source_model=source_model,
                 injected_by_attack=attack_injected,
                 attack_type=effective_attack_type,
             )
@@ -197,6 +227,10 @@ class SingleRunExecutor:
                     attack_changed_fields=attack_changed_fields,
                     reason=result.reason,
                     route_meta=event_route_meta,
+                    source_model=source_model,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=total_tokens,
                 )
             )
             parent_message_id = routed_message.message_id
@@ -207,6 +241,7 @@ class SingleRunExecutor:
         rerouted = sum(1 for event in events if event.rerouted_to_sv)
         attacked = sum(1 for event in events if event.attack_injected)
         final_context = context_store.render_context("A7")
+        usage_summary = merge_usage_records(usage_records)
         return SingleRunResult(
             run_id=config.run_id,
             task_id=task_packet.task.task_id,
@@ -224,4 +259,9 @@ class SingleRunExecutor:
             downweighted_messages=downweighted,
             rerouted_messages=rerouted,
             attacked_messages=attacked,
+            total_llm_calls=usage_summary.total_llm_calls,
+            total_input_tokens=usage_summary.total_input_tokens,
+            total_output_tokens=usage_summary.total_output_tokens,
+            total_tokens=usage_summary.total_tokens,
+            model_usage=usage_summary.model_dump(mode="json"),
         )

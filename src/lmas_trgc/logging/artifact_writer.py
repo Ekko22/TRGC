@@ -164,10 +164,13 @@ class RunArtifactWriter:
             f"- attack: `{summary.attack_type}`",
             f"- defense: `{summary.defense_name}`",
             f"- total_messages: `{summary.total_messages}`",
+            f"- total_llm_calls: `{summary.total_llm_calls}`",
+            f"- total_tokens: `{summary.total_tokens}`",
             f"- attacked_messages: `{summary.attacked_messages}`",
             f"- blocked_messages: `{summary.blocked_messages}`",
             f"- delivery_rate: `{metrics.delivery_rate:.4f}`",
             f"- block_rate: `{metrics.block_rate:.4f}`",
+            f"- avg_tokens_per_message: `{metrics.avg_tokens_per_message:.4f}`",
         ]
         if judge_outcome is not None:
             lines.extend(

@@ -28,6 +28,10 @@ def build_run_summary_record(
         completed=result.completed,
         final_agent=result.final_agent,
         total_messages=result.total_messages,
+        total_llm_calls=result.total_llm_calls,
+        total_input_tokens=result.total_input_tokens,
+        total_output_tokens=result.total_output_tokens,
+        total_tokens=result.total_tokens,
         delivered_messages=result.delivered_messages,
         blocked_messages=result.blocked_messages,
         downweighted_messages=result.downweighted_messages,
@@ -76,6 +80,10 @@ def build_message_event_records(
                 critical_nodes_reachable=list(route_meta.get("critical_nodes_reachable", [])),
                 exposure_level=route_meta.get("exposure_level"),
                 content_hash=None,
+                source_model=event.source_model,
+                input_tokens=event.input_tokens,
+                output_tokens=event.output_tokens,
+                total_tokens=event.total_tokens,
                 metadata={"route_meta_keys": sorted(route_meta)},
             )
         )

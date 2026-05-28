@@ -6,6 +6,7 @@ from lmas_trgc.communication.message import AgentMessage
 from lmas_trgc.core.ids import make_message_id
 from lmas_trgc.llm.client import OpenAICompatibleClient
 from lmas_trgc.llm.mock_client import MockLLMClient
+from lmas_trgc.llm.usage import make_usage_record
 from lmas_trgc.tasks.schema import TaskPacket
 
 
@@ -48,6 +49,7 @@ class AgentRuntime:
         )
         response = self.client.chat(messages)
         content = response.content
+        usage = make_usage_record(self.agent_profile.agent_id, response.model, response)
         message_id = make_message_id(
             task_id=task_packet.task.task_id,
             round_id=round_id,
@@ -70,4 +72,13 @@ class AgentRuntime:
             task_id=task_packet.task.task_id,
             is_forwarded=parent_message_id is not None,
             declared_authority=None,
+            metadata={
+                "llm_usage": {
+                    "model": usage.model_name,
+                    "input_tokens": usage.input_tokens,
+                    "output_tokens": usage.output_tokens,
+                    "total_tokens": usage.total_tokens,
+                    "call_count": usage.call_count,
+                }
+            },
         )

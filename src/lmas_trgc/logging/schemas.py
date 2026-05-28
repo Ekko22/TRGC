@@ -20,6 +20,10 @@ class RunSummaryRecord(BaseModel):
     completed: bool
     final_agent: str
     total_messages: int = Field(ge=0)
+    total_llm_calls: int = Field(default=0, ge=0)
+    total_input_tokens: int = Field(default=0, ge=0)
+    total_output_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
     delivered_messages: int = Field(ge=0)
     blocked_messages: int = Field(ge=0)
     downweighted_messages: int = Field(ge=0)
@@ -59,6 +63,10 @@ class MessageEventRecord(BaseModel):
     critical_nodes_reachable: list[str] = Field(default_factory=list)
     exposure_level: str | None = None
     content_hash: str | None = None
+    source_model: str | None = None
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
     metadata: dict = Field(default_factory=dict)
 
 
@@ -93,6 +101,11 @@ class MetricsRecord(BaseModel):
     downweighted_messages: int = Field(ge=0)
     rerouted_messages: int = Field(ge=0)
     attacked_messages: int = Field(ge=0)
+    total_llm_calls: int = Field(default=0, ge=0)
+    total_input_tokens: int = Field(default=0, ge=0)
+    total_output_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
+    avg_tokens_per_message: float = 0.0
     attack_injection_rate: float
     block_rate: float
     downweight_rate: float
