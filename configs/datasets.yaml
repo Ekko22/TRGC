@@ -8,26 +8,54 @@ datasets:
     metric: exact_match
     description: Grade-school math word problems.
     local_path: data/processed/public/gsm8k.jsonl
-    hf_path: gsm8k
+    processed_path: data/processed/public/gsm8k.jsonl
+    hf_path: openai/gsm8k
     hf_config: main
     hf_split: test
-    hf_candidates: []
+    primary_hf_path: openai/gsm8k
+    primary_hf_config: main
+    primary_hf_split: test
+    hf_candidates:
+      - path: openai/gsm8k
+        config: main
+        split: test
+      - path: gsm8k
+        config: main
+        split: test
+    local_raw_candidates:
+      - data/raw/public/gsm8k.jsonl
+      - data/raw/public/gsm8k.json
+
   prontoqa:
     name: prontoqa
     domain: logic_reasoning
-    source_type: local_jsonl_or_hf_candidates
+    source_type: hf_or_local
     default_split: test
     target_main_count: 8
     metric: accuracy
-    description: Logic reasoning tasks from local JSONL or configured HF candidates.
+    description: Logic reasoning tasks from local raw files or configured HF candidates.
     local_path: data/processed/public/prontoqa.jsonl
-    hf_path:
+    processed_path: data/processed/public/prontoqa.jsonl
+    hf_path: EleutherAI/prontoqa
     hf_config:
     hf_split: test
+    primary_hf_path: EleutherAI/prontoqa
+    primary_hf_config:
+    primary_hf_split: test
     hf_candidates:
-      - EleutherAI/prontoqa
-      - tasksource/prontoqa
-      - prontoqa
+      - path: EleutherAI/prontoqa
+        config:
+        split: test
+      - path: tasksource/prontoqa
+        config:
+        split: test
+      - path: prontoqa
+        config:
+        split: test
+    local_raw_candidates:
+      - data/raw/public/prontoqa.jsonl
+      - data/raw/public/prontoqa.json
+
   mmlu:
     name: mmlu
     domain: knowledge_reasoning
@@ -37,10 +65,24 @@ datasets:
     metric: accuracy
     description: Knowledge reasoning multiple-choice tasks.
     local_path: data/processed/public/mmlu.jsonl
+    processed_path: data/processed/public/mmlu.jsonl
     hf_path: cais/mmlu
     hf_config: all
     hf_split: test
-    hf_candidates: []
+    primary_hf_path: cais/mmlu
+    primary_hf_config: all
+    primary_hf_split: test
+    hf_candidates:
+      - path: cais/mmlu
+        config: all
+        split: test
+      - path: cais/mmlu
+        config: auxiliary_train
+        split: train
+    local_raw_candidates:
+      - data/raw/public/mmlu.jsonl
+      - data/raw/public/mmlu.json
+
   csqa:
     name: csqa
     domain: commonsense_reasoning
@@ -50,42 +92,91 @@ datasets:
     metric: accuracy
     description: CommonsenseQA multiple-choice tasks.
     local_path: data/processed/public/csqa.jsonl
-    hf_path: commonsense_qa
+    processed_path: data/processed/public/csqa.jsonl
+    hf_path: tau/commonsense_qa
     hf_config:
     hf_split: validation
-    hf_candidates: []
+    primary_hf_path: tau/commonsense_qa
+    primary_hf_config:
+    primary_hf_split: validation
+    hf_candidates:
+      - path: tau/commonsense_qa
+        config:
+        split: validation
+      - path: commonsense_qa
+        config:
+        split: validation
+      - path: Sadanto3933/commonsense_qa
+        config:
+        split: validation
+    local_raw_candidates:
+      - data/raw/public/csqa.jsonl
+      - data/raw/public/csqa.json
+      - data/raw/public/commonsense_qa.jsonl
+
   svamp:
     name: svamp
     domain: math_reasoning
-    source_type: local_jsonl_or_hf_candidates
+    source_type: hf_or_local
     default_split: test
     target_main_count: 8
     metric: exact_match
-    description: SVAMP math reasoning tasks from local JSONL or configured HF candidates.
+    description: SVAMP math reasoning tasks from local raw files or configured HF candidates.
     local_path: data/processed/public/svamp.jsonl
-    hf_path:
+    processed_path: data/processed/public/svamp.jsonl
+    hf_path: tongyx361/svamp
     hf_config:
     hf_split: test
+    primary_hf_path: tongyx361/svamp
+    primary_hf_config:
+    primary_hf_split: test
     hf_candidates:
-      - ChilleD/SVAMP
-      - svamp
-      - tasksource/svamp
+      - path: tongyx361/svamp
+        config:
+        split: test
+      - path: MU-NLPC/Calc-svamp
+        config:
+        split: test
+      - path: ChilleD/SVAMP
+        config:
+        split: test
+      - path: svamp
+        config:
+        split: test
+    local_raw_candidates:
+      - data/raw/public/svamp.jsonl
+      - data/raw/public/svamp.json
+
   multiarith:
     name: multiarith
     domain: math_reasoning
-    source_type: local_jsonl_or_hf_candidates
+    source_type: hf_or_local
     default_split: test
     target_main_count: 8
     metric: exact_match
-    description: MultiArith math reasoning tasks from local JSONL or configured HF candidates.
+    description: MultiArith math reasoning tasks from local raw files or configured HF candidates.
     local_path: data/processed/public/multiarith.jsonl
-    hf_path:
+    processed_path: data/processed/public/multiarith.jsonl
+    hf_path: ChilleD/MultiArith
     hf_config:
     hf_split: test
+    primary_hf_path: ChilleD/MultiArith
+    primary_hf_config:
+    primary_hf_split: test
     hf_candidates:
-      - ChilleD/MultiArith
-      - multiarith
-      - tasksource/multiarith
+      - path: ChilleD/MultiArith
+        config:
+        split: test
+      - path: multiarith
+        config:
+        split: test
+      - path: tasksource/multiarith
+        config:
+        split: test
+    local_raw_candidates:
+      - data/raw/public/multiarith.jsonl
+      - data/raw/public/multiarith.json
+
   aqua:
     name: aqua
     domain: math_reasoning
@@ -95,10 +186,31 @@ datasets:
     metric: accuracy
     description: AQuA rationales and answer selection tasks.
     local_path: data/processed/public/aqua.jsonl
-    hf_path: aqua_rat
-    hf_config:
+    processed_path: data/processed/public/aqua.jsonl
+    hf_path: divelab/aqua
+    hf_config: raw
     hf_split: test
-    hf_candidates: []
+    primary_hf_path: divelab/aqua
+    primary_hf_config: raw
+    primary_hf_split: test
+    hf_candidates:
+      - path: divelab/aqua
+        config: raw
+        split: test
+      - path: divelab/aqua
+        config:
+        split: test
+      - path: Chinar/AQuA-RAT
+        config:
+        split: train
+      - path: hails/agieval-aqua-rat
+        config:
+        split: train
+    local_raw_candidates:
+      - data/raw/public/aqua.jsonl
+      - data/raw/public/aqua.json
+      - data/raw/public/aqua_rat.jsonl
+
   humaneval:
     name: humaneval
     domain: code
@@ -108,10 +220,25 @@ datasets:
     metric: pass_at_1_or_review_accuracy
     description: HumanEval code generation tasks.
     local_path: data/processed/public/humaneval.jsonl
-    hf_path: openai_humaneval
+    processed_path: data/processed/public/humaneval.jsonl
+    hf_path: openai/openai_humaneval
     hf_config:
     hf_split: test
-    hf_candidates: []
+    primary_hf_path: openai/openai_humaneval
+    primary_hf_config:
+    primary_hf_split: test
+    hf_candidates:
+      - path: openai/openai_humaneval
+        config:
+        split: test
+      - path: openai_humaneval
+        config:
+        split: test
+    local_raw_candidates:
+      - data/raw/public/humaneval.jsonl
+      - data/raw/public/humaneval.json
+      - data/raw/public/openai_humaneval.jsonl
+
   mbpp:
     name: mbpp
     domain: code
@@ -121,10 +248,27 @@ datasets:
     metric: pass_at_1_or_review_accuracy
     description: MBPP code generation tasks.
     local_path: data/processed/public/mbpp.jsonl
-    hf_path: mbpp
+    processed_path: data/processed/public/mbpp.jsonl
+    hf_path: Muennighoff/mbpp
     hf_config:
     hf_split: test
-    hf_candidates: []
+    primary_hf_path: Muennighoff/mbpp
+    primary_hf_config:
+    primary_hf_split: test
+    hf_candidates:
+      - path: Muennighoff/mbpp
+        config:
+        split: test
+      - path: mbpp
+        config: full
+        split: test
+      - path: google-research-datasets/mbpp
+        config: full
+        split: test
+    local_raw_candidates:
+      - data/raw/public/mbpp.jsonl
+      - data/raw/public/mbpp.json
+
   constraint_miniset:
     name: constraint_miniset
     domain: constraints
@@ -134,10 +278,17 @@ datasets:
     metric: task_success_and_safety
     description: Local synthetic constraint-following tasks.
     local_path: data/processed/synthetic/constraint_miniset.jsonl
+    processed_path: data/processed/synthetic/constraint_miniset.jsonl
     hf_path:
     hf_config:
     hf_split:
+    primary_hf_path:
+    primary_hf_config:
+    primary_hf_split:
     hf_candidates: []
+    local_raw_candidates: []
+    download_supported: false
+
   local_mas_safety:
     name: local_mas_safety
     domain: local_mas_safety
@@ -147,7 +298,13 @@ datasets:
     metric: task_success_and_safety
     description: Local multi-agent safety scenarios independent of any specific product.
     local_path: data/processed/synthetic/local_mas_safety.jsonl
+    processed_path: data/processed/synthetic/local_mas_safety.jsonl
     hf_path:
     hf_config:
     hf_split:
+    primary_hf_path:
+    primary_hf_config:
+    primary_hf_split:
     hf_candidates: []
+    local_raw_candidates: []
+    download_supported: false

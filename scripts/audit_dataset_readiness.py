@@ -21,8 +21,24 @@ def _dataset_path(dataset: str, public_dir: Path, synthetic_dir: Path) -> Path:
     return public_dir / f"{dataset}.jsonl"
 
 
-def audit_datasets(processed_public_dir: Path, synthetic_dir: Path) -> dict:
+def _load_readiness_report(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    datasets = raw.get("datasets")
+    return datasets if isinstance(datasets, dict) else {}
+
+
+def audit_datasets(
+    processed_public_dir: Path,
+    synthetic_dir: Path,
+    readiness_report_path: Path = Path("data/manifests/public_dataset_readiness.json"),
+) -> dict:
     specs = get_default_dataset_specs()
+    last_readiness = _load_readiness_report(readiness_report_path)
     records: dict[str, dict] = {}
     for dataset in [*PUBLIC_DATASETS, *SYNTHETIC_DATASETS]:
         path = _dataset_path(dataset, processed_public_dir, synthetic_dir)
@@ -35,6 +51,7 @@ def audit_datasets(processed_public_dir: Path, synthetic_dir: Path) -> dict:
             except Exception as exc:
                 error = f"{type(exc).__name__}: {exc}"
         target = specs[dataset].target_main_count
+        last_record = last_readiness.get(dataset, {}) if isinstance(last_readiness.get(dataset), dict) else {}
         records[dataset] = {
             "dataset": dataset,
             "path": str(path),
@@ -43,16 +60,23 @@ def audit_datasets(processed_public_dir: Path, synthetic_dir: Path) -> dict:
             "target_main_count": target,
             "ready": exists and error is None and count >= target,
             "error": error,
+            "last_status": last_record.get("status"),
+            "last_source": last_record.get("source_detail") or last_record.get("source"),
         }
     public_ready = sum(1 for dataset in PUBLIC_DATASETS if records[dataset]["ready"])
     synthetic_ready = sum(1 for dataset in SYNTHETIC_DATASETS if records[dataset]["ready"])
     total_available = sum(min(record["count"], record["target_main_count"]) for record in records.values())
+    can_build_full = (
+        public_ready == len(PUBLIC_DATASETS)
+        and synthetic_ready == len(SYNTHETIC_DATASETS)
+        and total_available >= 104
+    )
     return {
         "datasets": records,
         "public_ready_count": public_ready,
         "synthetic_ready_count": synthetic_ready,
         "total_available_tasks": total_available,
-        "can_build_full_manifest": public_ready == len(PUBLIC_DATASETS) and synthetic_ready == len(SYNTHETIC_DATASETS),
+        "can_build_full_manifest": can_build_full,
         "missing_datasets": [name for name, record in records.items() if not record["ready"]],
     }
 
@@ -64,9 +88,14 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--require-full", action="store_true")
     parser.add_argument("--report-path", default="data/manifests/dataset_audit.json")
+    parser.add_argument("--readiness-report", default="data/manifests/public_dataset_readiness.json")
     args = parser.parse_args()
 
-    report = audit_datasets(Path(args.processed_public_dir), Path(args.synthetic_dir))
+    report = audit_datasets(
+        Path(args.processed_public_dir),
+        Path(args.synthetic_dir),
+        Path(args.readiness_report),
+    )
     report_path = Path(args.report_path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

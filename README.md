@@ -268,10 +268,16 @@ The main experiment uses 11 data sources:
 
 The complete main manifest requires 104 tasks: 8 from each public dataset and 16 from each synthetic dataset. Public datasets can be prepared either by explicit HuggingFace download or by importing local raw JSON/JSONL files. `data/raw/`, `data/processed/`, and `data/manifests/` must not be committed to Git.
 
-Prepare all supported public datasets with explicit download enabled:
+Downloads are disabled by default. Prepare all supported public datasets with explicit download enabled:
 
 ```bash
 conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset all --allow-download --overwrite --json
+```
+
+If the default HuggingFace endpoint is unavailable, specify a mirror:
+
+```bash
+conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset all --allow-download --hf-endpoint https://hf-mirror.com --overwrite --json
 ```
 
 Import local raw public datasets from a directory:
@@ -286,7 +292,13 @@ Prepare a single public dataset from a local raw JSON/JSONL file:
 conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset gsm8k --input-path /path/to/gsm8k.jsonl --overwrite
 ```
 
-Downloads are disabled by default. `gsm8k`, `mmlu`, `csqa`, `aqua`, `humaneval`, and `mbpp` use configured HuggingFace sources when `--allow-download` is supplied. `prontoqa`, `svamp`, and `multiarith` first look for local raw files under `data/raw/public/` and then try configured HuggingFace candidates. If a public dataset cannot be downloaded or imported, it remains missing or failed; synthetic data is never used as a substitute for public data. Standardized public outputs are written under `data/processed/public/`, which must not be committed.
+Print accepted raw JSON/JSONL shapes before preparing local files:
+
+```bash
+conda run -n lmas-trgc python scripts/print_public_dataset_raw_schema.py --dataset all --json
+```
+
+`gsm8k`, `mmlu`, `csqa`, `aqua`, `humaneval`, and `mbpp` use configured HuggingFace candidates when `--allow-download` is supplied. `prontoqa`, `svamp`, and `multiarith` first look for local raw files under `data/raw/public/` and then try configured HuggingFace candidates. If a public dataset cannot be downloaded or imported, it remains missing or failed; synthetic data is never used as a substitute for public data. Standardized public outputs are written under `data/processed/public/`, which must not be committed.
 
 The synthetic datasets can be generated locally:
 
@@ -314,7 +326,7 @@ If automatic public download fails, place raw files at:
 data/raw/public/<dataset>.jsonl
 ```
 
-Step 11 readiness status: synthetic datasets are ready with 32 total tasks, but the public datasets were not available from the local raw directory or HuggingFace/cache in the latest preparation attempt. The full 104-task main manifest has therefore not been frozen yet.
+The readiness and manifest commands are intentionally strict: `audit_dataset_readiness.py --json` reports which datasets are ready, and `build_task_manifest.py --require-full` refuses to freeze a main manifest unless all 104 target tasks are available.
 
 ## Step 1 Status
 
@@ -402,6 +414,7 @@ Step 11 adds:
 - Dataset readiness auditing for all 11 dataset sources.
 - Explicit public dataset download/import reporting with missing and failed dataset states.
 - Strict `--require-full` manifest freezing for the 104-task main pool.
+- HuggingFace candidate fallback, mirror/cache configuration, and raw schema guidance for public datasets.
 
 ## Later Development
 

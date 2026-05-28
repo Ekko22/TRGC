@@ -66,3 +66,25 @@ def test_build_manifest_require_full_succeeds_with_all_fake_public_data(tmp_path
     assert payload["dataset_counts"] == expected
     manifest_text = (tmp_path / "data" / "manifests" / "main_manifest.json").read_text(encoding="utf-8")
     assert "prompt" not in manifest_text
+
+
+def test_build_manifest_require_full_fails_when_one_public_file_missing(tmp_path):
+    repo_root = Path(__file__).resolve().parents[1]
+    public_dir = tmp_path / "data" / "processed" / "public"
+    for dataset in PUBLIC_DATASETS:
+        if dataset == "mbpp":
+            continue
+        save_tasks_to_jsonl([_fake_task(dataset, i) for i in range(8)], public_dir / f"{dataset}.jsonl")
+
+    completed = _run_build(
+        repo_root,
+        tmp_path,
+        "--require-full",
+        "--output",
+        "data/manifests/main_manifest.json",
+        "--json",
+    )
+    assert completed.returncode == 2
+    payload = json.loads(completed.stdout)
+    assert payload["is_full_manifest"] is False
+    assert "mbpp" in payload["missing_datasets"]

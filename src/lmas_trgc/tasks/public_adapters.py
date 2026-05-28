@@ -12,9 +12,10 @@ from lmas_trgc.tasks.normalizers import (
 from lmas_trgc.tasks.schema import TaskRecord
 
 
-def _require_prompt(dataset: str, index: int, prompt: str) -> str:
+def _require_prompt(dataset: str, index: int, prompt: str, available_fields: list[str] | None = None) -> str:
     if not prompt:
-        raise ValueError(f"{dataset} index {index}: missing prompt/question field")
+        fields = f"; available fields={available_fields}" if available_fields is not None else ""
+        raise ValueError(f"{dataset} index {index}: missing prompt/question field{fields}")
     return prompt
 
 
@@ -28,13 +29,14 @@ def _record(
     gold_answer: object,
     choices: list[str] | None = None,
     metadata: dict | None = None,
+    available_fields: list[str] | None = None,
 ) -> TaskRecord:
     return TaskRecord(
         task_id=make_public_task_id(dataset, split, index),
         dataset=dataset,
         domain=domain,
         split=split,
-        prompt=_require_prompt(dataset, index, prompt),
+        prompt=_require_prompt(dataset, index, prompt, available_fields),
         gold_answer=normalize_answer(gold_answer),
         choices=choices or [],
         source="public",
@@ -43,10 +45,14 @@ def _record(
 
 
 def convert_gsm8k_item(item: dict, index: int, split: str = "test") -> TaskRecord:
-    answer = normalize_text(item.get("answer"))
+    answer_value = item.get("answer", item.get("response", item.get("final_answer")))
+    answer = normalize_text(answer_value)
     if "####" in answer:
         gold = answer.split("####", 1)[1].strip()
         method = "hash_delimiter"
+    elif item.get("final_answer") is not None:
+        gold = item.get("final_answer")
+        method = "final_answer"
     else:
         gold = answer
         method = "raw_answer"
@@ -55,9 +61,10 @@ def convert_gsm8k_item(item: dict, index: int, split: str = "test") -> TaskRecor
         domain="math_reasoning",
         index=index,
         split=split,
-        prompt=normalize_text(item.get("question")),
+        prompt=normalize_text(item.get("question") or item.get("prompt")),
         gold_answer=gold,
         metadata={"raw_answer": answer, "answer_extraction_method": method},
+        available_fields=sorted(item),
     )
 
 
@@ -72,11 +79,14 @@ def convert_prontoqa_item(item: dict, index: int, split: str = "test") -> TaskRe
         prompt=prompt,
         gold_answer=gold,
         metadata=compact_metadata(item, ["query", "target", "label", "answer"]),
+        available_fields=sorted(item),
     )
 
 
 def convert_mmlu_item(item: dict, index: int, split: str = "test") -> TaskRecord:
-    choices = normalize_choices(item.get("choices") or [item.get(label) for label in ["A", "B", "C", "D"] if item.get(label)])
+    choices = normalize_choices(
+        item.get("choices") or [item.get(label) for label in ["A", "B", "C", "D", "E"] if item.get(label)]
+    )
     raw_answer = item.get("answer")
     if isinstance(raw_answer, int) and choices:
         gold = chr(ord("A") + raw_answer)
@@ -91,6 +101,7 @@ def convert_mmlu_item(item: dict, index: int, split: str = "test") -> TaskRecord
         gold_answer=gold,
         choices=choices,
         metadata={"subject": normalize_text(item.get("subject")), "raw_answer": raw_answer},
+        available_fields=sorted(item),
     )
 
 
@@ -101,12 +112,13 @@ def convert_csqa_item(item: dict, index: int, split: str = "validation") -> Task
         index=index,
         split=split,
         prompt=normalize_text(item.get("question")),
-        gold_answer=item.get("answerKey", item.get("answer")),
+        gold_answer=item.get("answerKey", item.get("answer", item.get("label"))),
         choices=normalize_choices(item.get("choices")),
         metadata={
             "question_concept": normalize_text(item.get("question_concept")),
-            "raw_answer": item.get("answerKey", item.get("answer")),
+            "raw_answer": item.get("answerKey", item.get("answer", item.get("label"))),
         },
+        available_fields=sorted(item),
     )
 
 
@@ -120,14 +132,15 @@ def convert_svamp_item(item: dict, index: int, split: str = "test") -> TaskRecor
         index=index,
         split=split,
         prompt=prompt,
-        gold_answer=item.get("Answer", item.get("answer", item.get("Result"))),
+        gold_answer=item.get("Answer", item.get("answer", item.get("Result", item.get("result")))),
         metadata={"equation": normalize_text(item.get("Equation") or item.get("equation"))},
+        available_fields=sorted(item),
     )
 
 
 def convert_multiarith_item(item: dict, index: int, split: str = "test") -> TaskRecord:
     prompt = normalize_text(item.get("question") or item.get("sQuestion") or item.get("Question"))
-    answer = item.get("final_ans", item.get("answer", item.get("lSolutions", item.get("Answer"))))
+    answer = item.get("final_ans", item.get("final_answer", item.get("answer", item.get("lSolutions", item.get("Answer")))))
     if isinstance(answer, list) and answer:
         answer = answer[0]
     return _record(
@@ -138,19 +151,22 @@ def convert_multiarith_item(item: dict, index: int, split: str = "test") -> Task
         prompt=prompt,
         gold_answer=answer,
         metadata={"equation": normalize_text(item.get("equation"))},
+        available_fields=sorted(item),
     )
 
 
 def convert_aqua_item(item: dict, index: int, split: str = "test") -> TaskRecord:
+    prompt = normalize_text(item.get("question") or item.get("prompt"))
     return _record(
         dataset="aqua",
         domain="math_reasoning",
         index=index,
         split=split,
-        prompt=normalize_text(item.get("question")),
-        gold_answer=item.get("correct", item.get("answer")),
-        choices=normalize_choices(item.get("options")),
-        metadata=compact_metadata(item, ["rationale"], max_value_chars=500),
+        prompt=prompt,
+        gold_answer=item.get("correct", item.get("answer", item.get("completion"))),
+        choices=normalize_choices(item.get("options") or item.get("choices")),
+        metadata=compact_metadata(item, ["rationale", "completion"], max_value_chars=500),
+        available_fields=sorted(item),
     )
 
 
@@ -161,9 +177,10 @@ def convert_humaneval_item(item: dict, index: int, split: str = "test") -> TaskR
         index=index,
         split=split,
         prompt=normalize_text(item.get("prompt"), preserve_newlines=True),
-        gold_answer=item.get("canonical_solution"),
-        metadata=compact_metadata(item, ["task_id", "entry_point", "test"], max_value_chars=800)
+        gold_answer=item.get("canonical_solution", item.get("solution")),
+        metadata=compact_metadata(item, ["task_id", "entry_point", "test", "tests"], max_value_chars=800)
         | {"source_task_id": normalize_text(item.get("task_id"))},
+        available_fields=sorted(item),
     )
 
 
@@ -175,9 +192,14 @@ def convert_mbpp_item(item: dict, index: int, split: str = "test") -> TaskRecord
         index=index,
         split=split,
         prompt=prompt,
-        gold_answer=item.get("code"),
-        metadata=compact_metadata(item, ["task_id", "test_list", "test_setup_code"], max_value_chars=800)
+        gold_answer=item.get("code", item.get("canonical_solution")),
+        metadata=compact_metadata(
+            item,
+            ["task_id", "test_list", "challenge_test_list", "test_setup_code"],
+            max_value_chars=800,
+        )
         | {"source_task_id": normalize_text(item.get("task_id"))},
+        available_fields=sorted(item),
     )
 
 
@@ -200,9 +222,8 @@ def convert_public_item(dataset: str, item: dict, index: int, split: str) -> Tas
     try:
         return CONVERTERS[dataset](item, index, split)
     except Exception as exc:
-        if isinstance(exc, ValueError) and f"{dataset} index {index}" in str(exc):
-            raise
-        raise ValueError(f"{dataset} index {index}: failed to convert item: {exc}") from exc
+        fields = sorted(item)
+        raise ValueError(f"{dataset} index {index}: failed to convert item: {exc}; available fields={fields}") from exc
 
 
 def convert_public_items(dataset: str, items: list[dict], split: str) -> list[TaskRecord]:

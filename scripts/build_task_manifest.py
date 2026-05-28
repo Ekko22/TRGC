@@ -65,6 +65,11 @@ def main() -> int:
         for name, expected in expected_counts.items()
         if manifest.dataset_counts.get(name, 0) != expected
     }
+    insufficient_datasets = [
+        name
+        for name, mismatch in count_mismatches.items()
+        if mismatch["actual"] > 0 and mismatch["actual"] < mismatch["expected"]
+    ]
     missing_public = [name for name in PUBLIC_DATASETS if name in manifest.missing_datasets]
     is_full_manifest = (
         manifest.total_tasks == args.expected_count
@@ -77,6 +82,7 @@ def main() -> int:
         "total_tasks": manifest.total_tasks,
         "dataset_counts": manifest.dataset_counts,
         "missing_datasets": manifest.missing_datasets,
+        "insufficient_datasets": insufficient_datasets,
         "count_mismatches": count_mismatches,
         "is_full_manifest": is_full_manifest,
         "output": args.output,

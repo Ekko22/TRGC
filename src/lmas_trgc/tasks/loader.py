@@ -87,9 +87,10 @@ def load_public_jsonl_dataset(dataset: str, processed_dir: Path) -> list[TaskRec
 
 
 def load_local_dataset(spec: DatasetSpec, base_dir: Path) -> list[TaskRecord]:
-    if not spec.local_path:
+    local_path = spec.local_path or spec.processed_path
+    if not local_path:
         return []
-    path = Path(spec.local_path)
+    path = Path(local_path)
     if not path.is_absolute():
         path = base_dir / path
     if not path.exists():
@@ -114,7 +115,7 @@ def load_dataset_tasks(
     local_tasks = load_local_dataset(spec, base_dir)
     if local_tasks:
         return local_tasks
-    if spec.source_type in {"local_jsonl", "local_jsonl_or_hf_candidates", "synthetic"}:
+    if spec.source_type in {"local_jsonl", "local_jsonl_or_hf_candidates", "hf_or_local", "synthetic"}:
         return []
     if spec.source_type == "hf":
         return load_hf_dataset_stub(spec, allow_download=allow_download)
