@@ -318,6 +318,14 @@ Freeze the full main manifest:
 conda run -n lmas-trgc python scripts/build_task_manifest.py --require-full --output data/manifests/main_manifest.json --json
 ```
 
+Audit the finalized 104-task data package:
+
+```bash
+conda run -n lmas-trgc python scripts/audit_task_quality.py --require-full --json
+```
+
+The active quality-audited pool is `main_v2_104`: 9 public datasets, including ProntoQA, plus 2 synthetic datasets. The JSON quality report is written to `data/manifests/task_quality_report.json` and is not committed. The Markdown audit summary is written to `docs/dev_logs/0015_data_quality_audit.md` and intentionally omits full prompts, code bodies, and raw rows.
+
 The final main experiment target is 104 tasks: 8 from each of the 9 active public datasets, 16 from Constraint MiniSet, and 16 from Local-MAS Safety Set. When public datasets are not present locally, the manifest builder records them as missing and can still create a synthetic-only manifest for engineering smoke tests. `--require-full` enforces the complete 104-task requirement and fails if any dataset is missing or short. Local-MAS Safety Set describes generic local multi-agent system scenarios and is not bound to any specific local agent product.
 
 If automatic public download fails, place raw files at:

@@ -21,6 +21,7 @@ from lmas_trgc.tasks.registry import DatasetSpec, get_default_dataset_specs
 from lmas_trgc.tasks.schema import TaskRecord
 
 EXPECTED_TOTAL_TASKS = 104
+EXPECTED_MANIFEST_ID = "main_v2_104"
 PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 SYNTHETIC_DATASETS = ["constraint_miniset", "local_mas_safety"]
 ACTIVE_DATASETS = [*PUBLIC_DATASETS, *SYNTHETIC_DATASETS]
@@ -253,10 +254,14 @@ def audit_manifest(path: Path, tasks_by_dataset: dict[str, dict[str, TaskRecord]
     except Exception as exc:
         errors.append(_message("error", None, "manifest_parse_failed", f"Failed to parse manifest: {type(exc).__name__}: {exc}"))
         return {"exists": True, "errors": errors, "warnings": warnings}
+    if manifest.manifest_id != EXPECTED_MANIFEST_ID:
+        errors.append(_message("error", None, "manifest_id_mismatch", f"Expected {EXPECTED_MANIFEST_ID}, got {manifest.manifest_id}"))
     if manifest.total_tasks != EXPECTED_TOTAL_TASKS:
         errors.append(_message("error", None, "manifest_total_mismatch", f"Expected {EXPECTED_TOTAL_TASKS}, got {manifest.total_tasks}"))
     if manifest.dataset_counts != EXPECTED_DATASET_COUNTS:
         errors.append(_message("error", None, "manifest_count_mismatch", f"Expected counts {EXPECTED_DATASET_COUNTS}, got {manifest.dataset_counts}"))
+    if "prontoqa" not in manifest.dataset_counts:
+        errors.append(_message("error", "prontoqa", "manifest_prontoqa_missing", "Manifest dataset_counts must include prontoqa"))
     if manifest.missing_datasets:
         errors.append(_message("error", None, "manifest_missing_datasets", f"Manifest has missing_datasets={manifest.missing_datasets}"))
     if len(manifest.entries) != EXPECTED_TOTAL_TASKS:
@@ -281,6 +286,8 @@ def audit_manifest(path: Path, tasks_by_dataset: dict[str, dict[str, TaskRecord]
         target = EXPECTED_DATASET_COUNTS.get(dataset)
         if target is not None and count > target:
             errors.append(_message("error", dataset, "manifest_dataset_over_selected", f"Selected {count}, target is {target}"))
+    if "prontoqa" not in selected_counts:
+        errors.append(_message("error", "prontoqa", "manifest_prontoqa_missing", "Manifest entries must include prontoqa tasks"))
     return {
         "exists": True,
         "manifest_id": manifest.manifest_id,
@@ -345,6 +352,18 @@ def audit_task_quality(
     tasks_by_dataset: dict[str, dict[str, TaskRecord]] = {}
     errors: list[dict] = []
     warnings: list[dict] = []
+    spec_names = list(specs)
+    if spec_names != ACTIVE_DATASETS:
+        errors.append(
+            _message(
+                "error",
+                None,
+                "active_pool_mismatch",
+                f"Expected active dataset pool {ACTIVE_DATASETS}, got {spec_names}",
+            )
+        )
+    if "prontoqa" not in specs:
+        errors.append(_message("error", "prontoqa", "active_pool_prontoqa_missing", "Active dataset pool must include prontoqa"))
     for dataset in ACTIVE_DATASETS:
         spec = specs[dataset]
         report, tasks = audit_dataset_file(dataset, spec, _dataset_path(dataset, spec, processed_public_dir, synthetic_dir))
@@ -404,9 +423,9 @@ def write_markdown_report(report: dict, path: Path) -> None:
     if status == "pass":
         decision = "The 104-task manifest is accepted for the next experimental stage."
     elif status == "warning":
-        decision = "The manifest is usable for pilot runs, but warnings should be reviewed before main experiments."
+        decision = "The 104-task manifest is usable for pilot runs, but warnings should be reviewed before main experiments."
     else:
-        decision = "The manifest is not accepted; listed errors must be fixed before running real experiments."
+        decision = "The 104-task manifest is not accepted; listed errors must be fixed before running real experiments."
     lines = [
         "# Data Quality Audit",
         "",
@@ -419,6 +438,12 @@ def write_markdown_report(report: dict, path: Path) -> None:
         f"- Active datasets: {len(PUBLIC_DATASETS)} public datasets and {len(SYNTHETIC_DATASETS)} synthetic datasets.",
         "- Expected manifest size: 104 tasks.",
         "- Full prompts, code bodies, tests, and data rows are intentionally omitted.",
+        "",
+        "## Active Dataset Pool",
+        "",
+        "- Public datasets: " + ", ".join(PUBLIC_DATASETS) + ".",
+        "- Synthetic datasets: " + ", ".join(SYNTHETIC_DATASETS) + ".",
+        "- ProntoQA is part of the active pool and must remain present in `main_v2_104`.",
         "",
         "## Overall Status",
         "",

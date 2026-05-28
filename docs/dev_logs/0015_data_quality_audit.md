@@ -2,13 +2,19 @@
 
 ## Date time
 
-2026-05-28T05:35:13.080723+00:00
+2026-05-28T06:35:47.331540+00:00
 
 ## Scope
 
 - Active datasets: 9 public datasets and 2 synthetic datasets.
 - Expected manifest size: 104 tasks.
 - Full prompts, code bodies, tests, and data rows are intentionally omitted.
+
+## Active Dataset Pool
+
+- Public datasets: gsm8k, prontoqa, mmlu, csqa, svamp, multiarith, aqua, humaneval, mbpp.
+- Synthetic datasets: constraint_miniset, local_mas_safety.
+- ProntoQA is part of the active pool and must remain present in `main_v2_104`.
 
 ## Overall Status
 

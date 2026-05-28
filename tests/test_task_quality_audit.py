@@ -105,7 +105,7 @@ def _write_fake_quality_tree(tmp_path: Path, *, task_mutations: dict | None = No
         else:
             path = tmp_path / "public" / f"{dataset}.jsonl"
         save_tasks_to_jsonl(tasks, path)
-    manifest = build_task_manifest(all_tasks, manifest_id="quality_test")
+    manifest = build_task_manifest(all_tasks, manifest_id="main_v2_104")
     manifest_path = tmp_path / "main_manifest.json"
     save_task_manifest(manifest, manifest_path)
     if manifest_mutator:
@@ -134,6 +134,18 @@ def test_quality_audit_fails_wrong_manifest_total(tmp_path):
     report = _audit(tmp_path, manifest_path)
     assert report["overall_status"] == "fail"
     assert any(error["code"] == "manifest_total_mismatch" for error in report["errors"])
+
+
+def test_quality_audit_fails_manifest_missing_prontoqa(tmp_path):
+    def mutate(raw):
+        raw["entries"] = [entry for entry in raw["entries"] if entry["dataset"] != "prontoqa"]
+        raw["dataset_counts"].pop("prontoqa", None)
+        raw["total_tasks"] = len(raw["entries"])
+
+    manifest_path = _write_fake_quality_tree(tmp_path, manifest_mutator=mutate)
+    report = _audit(tmp_path, manifest_path)
+    assert report["overall_status"] == "fail"
+    assert any(error["code"] == "manifest_prontoqa_missing" for error in report["errors"])
 
 
 def test_quality_audit_fails_manifest_contains_unknown_dataset(tmp_path):
