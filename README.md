@@ -257,6 +257,8 @@ conda run -n lmas-trgc python scripts/run_stage_c_deepseek_smoke.py --confirm-re
 
 The smoke validates the DeepSeek API path, 7-agent runtime, communication attack injection, TRGC pre-delivery checks, judge compatibility, artifact writing, and LLM token/call usage tracking. Later steps will extend this to local SV client mode and heterogeneous M1-M4 task models.
 
+Step 10A real DeepSeek smoke was successfully executed with explicit `--confirm-real-llm`. The smoke used `max_steps=2`, graph topology, message poisoning, TRGC, and SV client mode. It validated the real DeepSeek task-model path, local SV client path, TRGC defense, artifact writing, judge, and usage tracking. This is an engineering validation run, not a paper result.
+
 ## Task Data Layer
 
 The main experiment uses 11 data sources:
@@ -387,6 +389,7 @@ Step 10A adds:
 - Single-model client mapping for all task agents through M1.
 - LLM call and token usage tracking in message events, summaries, metrics, and artifacts.
 - Safe dry-run and config-only checks that do not call external APIs.
+- Successful real DeepSeek + SV client smoke validation for the bounded `graph/message_poisoning/trgc/max_steps=2` path.
 
 ## Later Development
 
