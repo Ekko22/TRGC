@@ -49,6 +49,20 @@ def _extract_lettered_choices_from_text(text: str) -> list[str]:
     matches = list(re.finditer(r"(?<![A-Za-z0-9])([A-E])[\).:]\s*", text))
     if len(matches) < 2:
         return []
+    sequence_start: int | None = None
+    for index, match in enumerate(matches):
+        if match.group(1).upper() != "A":
+            continue
+        expected = "A"
+        cursor = index
+        while cursor < len(matches) and matches[cursor].group(1).upper() == expected:
+            if expected == "E":
+                sequence_start = index
+                break
+            expected = chr(ord(expected) + 1)
+            cursor += 1
+    if sequence_start is not None:
+        matches = matches[sequence_start : sequence_start + 5]
     choices: list[str] = []
     for index, match in enumerate(matches):
         start = match.end()
@@ -60,7 +74,11 @@ def _extract_lettered_choices_from_text(text: str) -> list[str]:
 
 
 def convert_gsm8k_item(item: dict, index: int, split: str = "test") -> TaskRecord:
-    answer_value = item.get("answer", item.get("response", item.get("final_answer")))
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    answer_value = item.get(
+        "answer",
+        item.get("response", item.get("final_answer", metadata.get("raw_answer", item.get("gold_answer")))),
+    )
     answer = normalize_text(answer_value)
     if "####" in answer:
         gold = answer.split("####", 1)[1].strip()
@@ -83,11 +101,32 @@ def convert_gsm8k_item(item: dict, index: int, split: str = "test") -> TaskRecor
     )
 
 
+def convert_prontoqa_item(item: dict, index: int, split: str = "test") -> TaskRecord:
+    prompt = normalize_text(item.get("question") or item.get("query") or item.get("prompt"))
+    gold = item.get("answer", item.get("label", item.get("target", item.get("gold_answer"))))
+    metadata = compact_metadata(
+        item,
+        ["query", "target", "label", "rule_chain", "reasoning_chain", "target_property", "attackable_link", "gold_label"],
+        max_value_chars=800,
+    )
+    return _record(
+        dataset="prontoqa",
+        domain="logic_reasoning",
+        index=index,
+        split=split,
+        prompt=prompt,
+        gold_answer=gold,
+        choices=normalize_choices(item.get("choices")),
+        metadata=metadata,
+        available_fields=sorted(item),
+    )
+
+
 def convert_mmlu_item(item: dict, index: int, split: str = "test") -> TaskRecord:
     choices = normalize_choices(
         item.get("choices") or [item.get(label) for label in ["A", "B", "C", "D", "E"] if item.get(label)]
     )
-    raw_answer = item.get("answer")
+    raw_answer = item.get("answer", item.get("gold_answer"))
     if isinstance(raw_answer, int) and choices:
         gold = chr(ord("A") + raw_answer)
     else:
@@ -97,7 +136,7 @@ def convert_mmlu_item(item: dict, index: int, split: str = "test") -> TaskRecord
         domain="knowledge_reasoning",
         index=index,
         split=split,
-        prompt=normalize_text(item.get("question")),
+        prompt=normalize_text(item.get("question") or item.get("prompt")),
         gold_answer=gold,
         choices=choices,
         metadata={"subject": normalize_text(item.get("subject")), "raw_answer": raw_answer},
@@ -111,8 +150,8 @@ def convert_csqa_item(item: dict, index: int, split: str = "validation") -> Task
         domain="commonsense_reasoning",
         index=index,
         split=split,
-        prompt=normalize_text(item.get("question")),
-        gold_answer=item.get("answerKey", item.get("answer", item.get("label"))),
+        prompt=normalize_text(item.get("question") or item.get("prompt")),
+        gold_answer=item.get("answerKey", item.get("answer", item.get("label", item.get("gold_answer")))),
         choices=normalize_choices(item.get("choices")),
         metadata={
             "question_concept": normalize_text(item.get("question_concept")),
@@ -158,9 +197,8 @@ def convert_multiarith_item(item: dict, index: int, split: str = "test") -> Task
 def convert_aqua_item(item: dict, index: int, split: str = "test") -> TaskRecord:
     prompt = normalize_text(item.get("question") or item.get("prompt"))
     option_fields = [item.get(label) for label in ["A", "B", "C", "D", "E"] if item.get(label)]
-    choices = normalize_choices(item.get("options") or item.get("choices") or option_fields)
-    if len(choices) < 2:
-        choices = _extract_lettered_choices_from_text(prompt)
+    embedded_choices = _extract_lettered_choices_from_text(prompt)
+    choices = embedded_choices or normalize_choices(item.get("options") or item.get("choices") or option_fields)
     return _record(
         dataset="aqua",
         domain="math_reasoning",
@@ -209,6 +247,7 @@ def convert_mbpp_item(item: dict, index: int, split: str = "test") -> TaskRecord
 
 CONVERTERS: dict[str, Callable[[dict, int, str], TaskRecord]] = {
     "gsm8k": convert_gsm8k_item,
+    "prontoqa": convert_prontoqa_item,
     "mmlu": convert_mmlu_item,
     "csqa": convert_csqa_item,
     "svamp": convert_svamp_item,

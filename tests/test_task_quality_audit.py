@@ -5,12 +5,13 @@ from pathlib import Path
 
 from lmas_trgc.tasks.loader import save_tasks_to_jsonl
 from lmas_trgc.tasks.manifest import build_task_manifest, save_task_manifest
+from lmas_trgc.tasks.metadata_enrichment import enrich_task_metadata
 from lmas_trgc.tasks.quality import EXPECTED_DATASET_COUNTS, audit_task_quality
 from lmas_trgc.tasks.registry import get_default_dataset_specs
 from lmas_trgc.tasks.schema import TaskRecord
 
 
-PUBLIC_DATASETS = ["gsm8k", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 SYNTHETIC_DATASETS = ["constraint_miniset", "local_mas_safety"]
 
 
@@ -20,7 +21,17 @@ def _task(dataset: str, index: int, *, mutate: dict | None = None) -> TaskRecord
     gold = str(index)
     choices: list[str] = []
     metadata: dict = {}
-    if dataset == "mmlu":
+    if dataset == "prontoqa":
+        prompt = f"Rule chain task {index}. If an object is dax then it is blicket. The target object is dax. Is it blicket?"
+        choices = ["A. true", "B. false"]
+        gold = "true"
+        metadata = {
+            "rule_chain": ["dax -> blicket", "target is dax"],
+            "target_property": "blicket",
+            "attackable_link": "dax -> blicket",
+            "gold_label": "true",
+        }
+    elif dataset == "mmlu":
         choices = ["A. first", "B. second"]
         gold = "A"
     elif dataset == "csqa":
@@ -70,7 +81,7 @@ def _task(dataset: str, index: int, *, mutate: dict | None = None) -> TaskRecord
             prompt = mutate["prompt"]
         if "metadata" in mutate:
             metadata = mutate["metadata"]
-    return TaskRecord(
+    return enrich_task_metadata(TaskRecord(
         task_id=f"{dataset}_test_{index:05d}",
         dataset=dataset,
         domain=spec.domain,
@@ -80,7 +91,7 @@ def _task(dataset: str, index: int, *, mutate: dict | None = None) -> TaskRecord
         choices=choices,
         source="test",
         metadata=metadata,
-    )
+    ))
 
 
 def _write_fake_quality_tree(tmp_path: Path, *, task_mutations: dict | None = None, manifest_mutator=None) -> Path:
@@ -108,16 +119,16 @@ def _audit(tmp_path: Path, manifest_path: Path):
     return audit_task_quality(tmp_path / "public", tmp_path / "synthetic", manifest_path)
 
 
-def test_quality_audit_passes_complete_fake_96_structure(tmp_path):
+def test_quality_audit_passes_complete_fake_104_structure(tmp_path):
     manifest_path = _write_fake_quality_tree(tmp_path)
     report = _audit(tmp_path, manifest_path)
     assert report["overall_status"] == "pass"
-    assert report["manifest_total_tasks"] == 96
+    assert report["manifest_total_tasks"] == 104
 
 
 def test_quality_audit_fails_wrong_manifest_total(tmp_path):
     def mutate(raw):
-        raw["total_tasks"] = 95
+        raw["total_tasks"] = 103
 
     manifest_path = _write_fake_quality_tree(tmp_path, manifest_mutator=mutate)
     report = _audit(tmp_path, manifest_path)
@@ -125,14 +136,14 @@ def test_quality_audit_fails_wrong_manifest_total(tmp_path):
     assert any(error["code"] == "manifest_total_mismatch" for error in report["errors"])
 
 
-def test_quality_audit_fails_manifest_contains_prontoqa(tmp_path):
+def test_quality_audit_fails_manifest_contains_unknown_dataset(tmp_path):
     def mutate(raw):
-        raw["entries"][0]["dataset"] = "prontoqa"
+        raw["entries"][0]["dataset"] = "unknown_dataset"
 
     manifest_path = _write_fake_quality_tree(tmp_path, manifest_mutator=mutate)
     report = _audit(tmp_path, manifest_path)
     assert report["overall_status"] == "fail"
-    assert any(error["code"] == "manifest_prontoqa" for error in report["errors"])
+    assert any(error["code"] == "manifest_unknown_dataset" for error in report["errors"])
 
 
 def test_quality_audit_fails_public_prompt_pollution(tmp_path):

@@ -1,10 +1,11 @@
 stage: main
-num_tasks_placeholder: 96
-expected_task_count: 96
+num_tasks_placeholder: 104
+expected_task_count: 104
 manifest_path: data/manifests/main_manifest.json
-expected_runs: 7680
+expected_runs: 8320
 datasets:
   - gsm8k
+  - prontoqa
   - mmlu
   - csqa
   - svamp

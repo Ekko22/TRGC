@@ -14,6 +14,7 @@ VALID_DOMAINS = {
 
 VALID_DATASETS = {
     "gsm8k",
+    "prontoqa",
     "mmlu",
     "csqa",
     "svamp",

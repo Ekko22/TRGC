@@ -10,11 +10,18 @@ from typing import Any
 from lmas_trgc.tasks.anchors import build_task_packet
 from lmas_trgc.tasks.loader import load_tasks_from_jsonl
 from lmas_trgc.tasks.manifest import TaskManifest, load_task_manifest
+from lmas_trgc.tasks.metadata_enrichment import (
+    ANSWER_FORMAT_BY_DATASET,
+    ATTACK_TYPES,
+    CONSTRAINT_LABELS,
+    TARGET_SLOTS_BY_DATASET,
+    normalize_numeric_answer,
+)
 from lmas_trgc.tasks.registry import DatasetSpec, get_default_dataset_specs
 from lmas_trgc.tasks.schema import TaskRecord
 
-EXPECTED_TOTAL_TASKS = 96
-PUBLIC_DATASETS = ["gsm8k", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+EXPECTED_TOTAL_TASKS = 104
+PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 SYNTHETIC_DATASETS = ["constraint_miniset", "local_mas_safety"]
 ACTIVE_DATASETS = [*PUBLIC_DATASETS, *SYNTHETIC_DATASETS]
 EXPECTED_DATASET_COUNTS = {dataset: 8 for dataset in PUBLIC_DATASETS} | {
@@ -73,6 +80,7 @@ def _has_any(text: str, terms: list[str]) -> list[str]:
 def _check_dataset_task(task: TaskRecord, dataset: str) -> tuple[list[dict], list[dict]]:
     errors: list[dict] = []
     warnings: list[dict] = []
+    metadata = task.metadata or {}
     if task.dataset != dataset:
         errors.append(_message("error", dataset, "dataset_mismatch", f"Task dataset {task.dataset!r} does not match file {dataset!r}", task.task_id))
     if not task.prompt.strip():
@@ -94,6 +102,49 @@ def _check_dataset_task(task: TaskRecord, dataset: str) -> tuple[list[dict], lis
             errors.append(_message("error", dataset, "prompt_pollution", f"Public prompt contains forbidden marker: {term}", task.task_id))
     if dataset in {"mmlu", "csqa", "aqua"} and len(task.choices) < 2:
         errors.append(_message("error", dataset, "choices_too_short", "Multiple-choice task should have at least 2 choices", task.task_id))
+    for key in ["judge_type", "answer_format", "task_anchors", "target_slots", "attack_surfaces"]:
+        if key not in metadata:
+            errors.append(_message("error", dataset, "trgc_metadata_missing", f"Missing TRGC metadata key: {key}", task.task_id))
+    for slot in TARGET_SLOTS_BY_DATASET.get(dataset, []):
+        if slot not in metadata.get("target_slots", []):
+            errors.append(_message("error", dataset, "target_slot_missing", f"Missing target slot: {slot}", task.task_id))
+    attack_surfaces = metadata.get("attack_surfaces") if isinstance(metadata.get("attack_surfaces"), dict) else {}
+    for attack_type in ATTACK_TYPES:
+        if not attack_surfaces.get(attack_type):
+            errors.append(_message("error", dataset, "attack_surface_missing", f"Missing attack surface: {attack_type}", task.task_id))
+    expected_format = ANSWER_FORMAT_BY_DATASET.get(dataset)
+    if expected_format and metadata.get("answer_format") != expected_format:
+        errors.append(_message("error", dataset, "answer_format_mismatch", f"Expected {expected_format}, got {metadata.get('answer_format')}", task.task_id))
+    if metadata.get("answer_format") == "multiple_choice":
+        labels = []
+        for choice in task.choices:
+            match = re.match(r"^\s*([A-Z])(?:[\).:]|\s)", choice)
+            if match:
+                labels.append(match.group(1))
+        if len(labels) != len(set(labels)):
+            errors.append(_message("error", dataset, "choice_label_duplicate", "Choice labels must be unique", task.task_id))
+        if task.gold_answer not in labels:
+            errors.append(_message("error", dataset, "choice_gold_not_in_labels", "gold_answer must be one of the choice labels", task.task_id))
+    if metadata.get("answer_format") == "numeric_exact":
+        if not task.gold_answer or not re.fullmatch(r"-?\d+(?:\.\d+)?", task.gold_answer):
+            errors.append(_message("error", dataset, "numeric_answer_invalid", "numeric_exact gold_answer must be a numeric string", task.task_id))
+        raw_answer = metadata.get("raw_answer")
+        if dataset == "gsm8k" and isinstance(raw_answer, str) and "####" in raw_answer:
+            expected = normalize_numeric_answer(raw_answer.split("####", 1)[1])
+            if task.gold_answer != expected:
+                errors.append(_message("error", dataset, "numeric_answer_mismatch", f"Expected {expected} from raw_answer delimiter", task.task_id))
+    if metadata.get("answer_format") == "code_generation" and "tests" not in metadata:
+        errors.append(_message("error", dataset, "code_tests_missing", "code_generation metadata must include tests", task.task_id))
+    if metadata.get("answer_format") == "binary_safety" and task.gold_answer not in {"safe", "unsafe"}:
+        errors.append(_message("error", dataset, "binary_safety_label_invalid", "gold_answer must be safe or unsafe", task.task_id))
+    if metadata.get("answer_format") == "constraint_label" and task.gold_answer not in CONSTRAINT_LABELS:
+        errors.append(_message("error", dataset, "constraint_label_invalid", "gold_answer is not a supported constraint label", task.task_id))
+    if dataset == "prontoqa":
+        if not any(key in metadata for key in ["rule_chain", "reasoning_chain"]):
+            errors.append(_message("error", dataset, "prontoqa_metadata_missing", "ProntoQA metadata should include rule_chain or reasoning_chain", task.task_id))
+        for key in ["target_property", "attackable_link", "gold_label"]:
+            if key not in metadata:
+                errors.append(_message("error", dataset, "prontoqa_metadata_missing", f"Missing metadata key: {key}", task.task_id))
     if dataset == "humaneval":
         if "def " not in task.prompt and "function" not in task.prompt.lower():
             warnings.append(_message("warning", dataset, "humaneval_prompt_semantics", "HumanEval prompt lacks obvious function wording", task.task_id))
@@ -219,8 +270,6 @@ def audit_manifest(path: Path, tasks_by_dataset: dict[str, dict[str, TaskRecord]
             errors.append(_message("error", None, "manifest_secret_term", f"Manifest contains secret-like term: {term}"))
     selected_counts: Counter[str] = Counter()
     for entry in manifest.entries:
-        if entry.dataset == "prontoqa":
-            errors.append(_message("error", entry.dataset, "manifest_prontoqa", "Manifest must not contain prontoqa", entry.task_id))
         if entry.dataset not in ACTIVE_DATASETS:
             errors.append(_message("error", entry.dataset, "manifest_unknown_dataset", "Manifest dataset is not in active pool", entry.task_id))
         if not entry.selected:
@@ -353,7 +402,7 @@ def write_markdown_report(report: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     status = report["overall_status"]
     if status == "pass":
-        decision = "The 96-task manifest is accepted for the next experimental stage."
+        decision = "The 104-task manifest is accepted for the next experimental stage."
     elif status == "warning":
         decision = "The manifest is usable for pilot runs, but warnings should be reviewed before main experiments."
     else:
@@ -367,8 +416,8 @@ def write_markdown_report(report: dict, path: Path) -> None:
         "",
         "## Scope",
         "",
-        "- Active datasets: 8 public datasets and 2 synthetic datasets.",
-        "- Expected manifest size: 96 tasks.",
+        f"- Active datasets: {len(PUBLIC_DATASETS)} public datasets and {len(SYNTHETIC_DATASETS)} synthetic datasets.",
+        "- Expected manifest size: 104 tasks.",
         "- Full prompts, code bodies, tests, and data rows are intentionally omitted.",
         "",
         "## Overall Status",

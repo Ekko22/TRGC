@@ -122,6 +122,7 @@ def build_answer_contract(task: TaskRecord) -> dict:
         "gsm8k": "exact_match",
         "svamp": "exact_match",
         "multiarith": "exact_match",
+        "prontoqa": "accuracy",
         "mmlu": "accuracy",
         "csqa": "accuracy",
         "aqua": "accuracy",

@@ -7,6 +7,7 @@ from lmas_trgc.tasks.public_adapters import (
     convert_humaneval_item,
     convert_mbpp_item,
     convert_mmlu_item,
+    convert_prontoqa_item,
     convert_public_item,
     convert_svamp_item,
 )
@@ -16,6 +17,29 @@ def test_convert_gsm8k_extracts_hash_answer():
     task = convert_gsm8k_item({"question": "What is 40 + 2?", "answer": "Reasoning #### 42"}, 0)
     assert task.gold_answer == "42"
     assert task.domain == "math_reasoning"
+
+
+def test_convert_gsm8k_preserves_integer_trailing_zeroes():
+    task = convert_gsm8k_item({"question": "Profit?", "answer": "Reasoning #### 70000"}, 0)
+    assert task.gold_answer == "70000"
+
+
+def test_convert_prontoqa_logic_task_metadata():
+    task = convert_prontoqa_item(
+        {
+            "question": "If A implies B and target is A, is target B?",
+            "answer": "true",
+            "choices": ["A. true", "B. false"],
+            "rule_chain": ["A -> B", "target -> A"],
+            "target_property": "B",
+            "attackable_link": "A -> B",
+            "gold_label": "true",
+        },
+        0,
+    )
+    assert task.dataset == "prontoqa"
+    assert task.domain == "logic_reasoning"
+    assert task.metadata["target_property"] == "B"
 
 
 def test_convert_mmlu_int_answer_to_letter():
@@ -58,6 +82,20 @@ def test_convert_aqua_extracts_embedded_letter_choices():
     assert task.gold_answer == "C"
     assert len(task.choices) == 5
     assert task.choices[0] == "A. 12"
+
+
+def test_convert_aqua_uses_final_complete_choice_sequence():
+    task = convert_aqua_item(
+        {
+            "question": (
+                "Vitamin A. If the prompt mentions A before options, choose. "
+                "A. 8.5 B. 10.5 C. 12.5 D. 14.5 E. 16.5"
+            ),
+            "correct": "C",
+        },
+        0,
+    )
+    assert task.choices == ["A. 8.5", "B. 10.5", "C. 12.5", "D. 14.5", "E. 16.5"]
 
 
 def test_convert_humaneval_metadata():

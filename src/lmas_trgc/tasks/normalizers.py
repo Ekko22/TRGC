@@ -33,8 +33,13 @@ def normalize_answer(value: object) -> str:
     if re.fullmatch(r"[a-zA-Z]", text):
         return text.upper()
     try:
-        if re.fullmatch(r"[-+]?\d+(?:\.\d+)?", text):
-            return format(Decimal(text).normalize(), "f").rstrip("0").rstrip(".") or "0"
+        if re.fullmatch(r"[-+]?\d+", text):
+            sign = "-" if text.startswith("-") else ""
+            digits = text.lstrip("+-").lstrip("0") or "0"
+            return sign + digits
+        if re.fullmatch(r"[-+]?\d+\.\d+", text):
+            normalized = format(Decimal(text).normalize(), "f")
+            return normalized.rstrip("0").rstrip(".") or "0"
     except InvalidOperation:
         pass
     return text

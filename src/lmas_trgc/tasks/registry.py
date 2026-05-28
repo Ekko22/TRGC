@@ -104,6 +104,7 @@ class DatasetSpec(BaseModel):
 
 _DATASET_ORDER = [
     "gsm8k",
+    "prontoqa",
     "mmlu",
     "csqa",
     "svamp",
@@ -163,6 +164,7 @@ def _fallback_dataset_rows() -> dict[str, dict[str, Any]]:
                 "name": name,
                 "domain": {
                     "gsm8k": "math_reasoning",
+                    "prontoqa": "logic_reasoning",
                     "mmlu": "knowledge_reasoning",
                     "csqa": "commonsense_reasoning",
                     "svamp": "math_reasoning",
@@ -171,11 +173,12 @@ def _fallback_dataset_rows() -> dict[str, dict[str, Any]]:
                     "humaneval": "code",
                     "mbpp": "code",
                 }[name],
-                "source_type": "hf_or_local" if name in {"svamp", "multiarith"} else "hf",
+                "source_type": "hf_or_local" if name in {"prontoqa", "svamp", "multiarith"} else "hf",
                 "default_split": "validation" if name == "csqa" else "test",
                 "target_main_count": 8,
                 "metric": {
                     "gsm8k": "exact_match",
+                    "prontoqa": "accuracy",
                     "mmlu": "accuracy",
                     "csqa": "accuracy",
                     "svamp": "exact_match",

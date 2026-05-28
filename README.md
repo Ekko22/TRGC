@@ -261,12 +261,12 @@ Step 10A real DeepSeek smoke was successfully executed with explicit `--confirm-
 
 ## Task Data Layer
 
-The main experiment uses 10 data sources:
+The main experiment uses 11 data sources:
 
-- Public datasets: GSM8K, MMLU, CSQA, SVAMP, MultiArith, AQuA, HumanEval, MBPP.
+- Public datasets: GSM8K, ProntoQA, MMLU, CSQA, SVAMP, MultiArith, AQuA, HumanEval, MBPP.
 - Synthetic local datasets: Constraint MiniSet and Local-MAS Safety Set.
 
-The complete main manifest requires 96 tasks: 8 from each public dataset and 16 from each synthetic dataset. Public datasets can be prepared either by explicit HuggingFace download or by importing local raw JSON/JSONL files. `data/raw/`, `data/processed/`, and `data/manifests/` must not be committed to Git.
+The complete main manifest requires 104 tasks: 8 from each public dataset and 16 from each synthetic dataset. Public datasets can be prepared either by explicit HuggingFace download or by importing local raw JSON/JSONL files. `data/raw/`, `data/processed/`, and `data/manifests/` must not be committed to Git.
 
 Downloads are disabled by default. Prepare all supported public datasets with explicit download enabled:
 
@@ -298,7 +298,7 @@ Print accepted raw JSON/JSONL shapes before preparing local files:
 conda run -n lmas-trgc python scripts/print_public_dataset_raw_schema.py --dataset all --json
 ```
 
-`gsm8k`, `mmlu`, `csqa`, `aqua`, `humaneval`, and `mbpp` use configured HuggingFace candidates when `--allow-download` is supplied. `svamp` and `multiarith` first look for local raw files under `data/raw/public/` and then try configured HuggingFace candidates. `prontoqa` was removed from the active main task pool because the configured public sources were not reliably readable through the current data stack. If a public dataset cannot be downloaded or imported, it remains missing or failed; synthetic data is never used as a substitute for public data. Standardized public outputs are written under `data/processed/public/`, which must not be committed.
+`gsm8k`, `mmlu`, `csqa`, `aqua`, `humaneval`, and `mbpp` use configured HuggingFace candidates when `--allow-download` is supplied. `prontoqa`, `svamp`, and `multiarith` first look for local raw files under `data/raw/public/` and then try configured HuggingFace candidates. If a public dataset cannot be downloaded or imported, it remains missing or failed; synthetic data is never used as a substitute for public data. Standardized public outputs are written under `data/processed/public/`, which must not be committed.
 
 The synthetic datasets can be generated locally:
 
@@ -318,7 +318,7 @@ Freeze the full main manifest:
 conda run -n lmas-trgc python scripts/build_task_manifest.py --require-full --output data/manifests/main_manifest.json --json
 ```
 
-The final main experiment target is 96 tasks: 8 from each of the 8 active public datasets, 16 from Constraint MiniSet, and 16 from Local-MAS Safety Set. When public datasets are not present locally, the manifest builder records them as missing and can still create a synthetic-only manifest for engineering smoke tests. `--require-full` enforces the complete 96-task requirement and fails if any dataset is missing or short. Local-MAS Safety Set describes generic local multi-agent system scenarios and is not bound to any specific local agent product.
+The final main experiment target is 104 tasks: 8 from each of the 9 active public datasets, 16 from Constraint MiniSet, and 16 from Local-MAS Safety Set. When public datasets are not present locally, the manifest builder records them as missing and can still create a synthetic-only manifest for engineering smoke tests. `--require-full` enforces the complete 104-task requirement and fails if any dataset is missing or short. Local-MAS Safety Set describes generic local multi-agent system scenarios and is not bound to any specific local agent product.
 
 If automatic public download fails, place raw files at:
 
@@ -326,7 +326,7 @@ If automatic public download fails, place raw files at:
 data/raw/public/<dataset>.jsonl
 ```
 
-The readiness and manifest commands are intentionally strict: `audit_dataset_readiness.py --json` reports which datasets are ready, and `build_task_manifest.py --require-full` refuses to freeze a main manifest unless all 96 target tasks are available.
+The readiness and manifest commands are intentionally strict: `audit_dataset_readiness.py --json` reports which datasets are ready, and `build_task_manifest.py --require-full` refuses to freeze a main manifest unless all 104 target tasks are available.
 
 ## Step 1 Status
 
@@ -353,7 +353,7 @@ Step 2 adds:
 Step 3 adds:
 
 - Standard task schema, anchors, task packets, and manifest entries.
-- Fixed dataset registry for 8 active public and 2 synthetic data sources.
+- Fixed dataset registry for 9 active public and 2 synthetic data sources.
 - Local JSONL loader and HuggingFace loader stub with downloads disabled.
 - Deterministic synthetic task generation and main manifest creation.
 - Deterministic sampling and manifest validation tests.
@@ -411,11 +411,11 @@ Step 10A adds:
 
 Step 11 adds:
 
-- Dataset readiness auditing for all 10 active dataset sources.
+- Dataset readiness auditing for all 11 active dataset sources.
 - Explicit public dataset download/import reporting with missing and failed dataset states.
-- Strict `--require-full` manifest freezing for the 96-task main pool.
+- Strict `--require-full` manifest freezing for the 104-task main pool.
 - HuggingFace candidate fallback, mirror/cache configuration, and raw schema guidance for public datasets.
 
 ## Later Development
 
-Later stages will add heterogeneous M1-M4 real model execution, dataset-backed pilot execution after the 96-task manifest is frozen, G-Safeguard adapter integration, main matrix execution, tables, and figures.
+Later stages will add heterogeneous M1-M4 real model execution, dataset-backed pilot execution after the 104-task manifest is frozen, G-Safeguard adapter integration, main matrix execution, tables, and figures.

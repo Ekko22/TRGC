@@ -14,7 +14,7 @@ from lmas_trgc.tasks.local_synthetic import generate_constraint_miniset, generat
 from lmas_trgc.tasks.manifest import build_task_manifest, save_task_manifest
 from lmas_trgc.tasks.registry import get_default_dataset_specs
 
-PUBLIC_DATASETS = ["gsm8k", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
 
 
 def _ensure_synthetic_files(synthetic_dir: Path) -> None:
@@ -33,12 +33,12 @@ def main() -> int:
     parser.add_argument("--output", default="data/manifests/main_manifest.json")
     parser.add_argument("--synthetic-dir", default="data/processed/synthetic")
     parser.add_argument("--allow-download", action="store_true", default=False)
-    parser.add_argument("--manifest-id", default="main_v1_96")
+    parser.add_argument("--manifest-id", default="main_v2_104")
     parser.add_argument("--create-synthetic-if-missing", dest="create_synthetic_if_missing", action="store_true", default=True)
     parser.add_argument("--no-create-synthetic-if-missing", dest="create_synthetic_if_missing", action="store_false")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--require-full", action="store_true")
-    parser.add_argument("--expected-count", type=int, default=96)
+    parser.add_argument("--expected-count", type=int, default=104)
     parser.add_argument("--fail-on-missing-public", action="store_true")
     args = parser.parse_args()
 
