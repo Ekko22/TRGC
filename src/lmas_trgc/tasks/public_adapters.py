@@ -76,7 +76,7 @@ def convert_prontoqa_item(item: dict, index: int, split: str = "test") -> TaskRe
 
 
 def convert_mmlu_item(item: dict, index: int, split: str = "test") -> TaskRecord:
-    choices = normalize_choices(item.get("choices"))
+    choices = normalize_choices(item.get("choices") or [item.get(label) for label in ["A", "B", "C", "D"] if item.get(label)])
     raw_answer = item.get("answer")
     if isinstance(raw_answer, int) and choices:
         gold = chr(ord("A") + raw_answer)
@@ -120,19 +120,23 @@ def convert_svamp_item(item: dict, index: int, split: str = "test") -> TaskRecor
         index=index,
         split=split,
         prompt=prompt,
-        gold_answer=item.get("Answer", item.get("answer")),
+        gold_answer=item.get("Answer", item.get("answer", item.get("Result"))),
         metadata={"equation": normalize_text(item.get("Equation") or item.get("equation"))},
     )
 
 
 def convert_multiarith_item(item: dict, index: int, split: str = "test") -> TaskRecord:
+    prompt = normalize_text(item.get("question") or item.get("sQuestion") or item.get("Question"))
+    answer = item.get("final_ans", item.get("answer", item.get("lSolutions", item.get("Answer"))))
+    if isinstance(answer, list) and answer:
+        answer = answer[0]
     return _record(
         dataset="multiarith",
         domain="math_reasoning",
         index=index,
         split=split,
-        prompt=normalize_text(item.get("question")),
-        gold_answer=item.get("final_ans", item.get("answer")),
+        prompt=prompt,
+        gold_answer=answer,
         metadata={"equation": normalize_text(item.get("equation"))},
     )
 
@@ -144,7 +148,7 @@ def convert_aqua_item(item: dict, index: int, split: str = "test") -> TaskRecord
         index=index,
         split=split,
         prompt=normalize_text(item.get("question")),
-        gold_answer=item.get("correct"),
+        gold_answer=item.get("correct", item.get("answer")),
         choices=normalize_choices(item.get("options")),
         metadata=compact_metadata(item, ["rationale"], max_value_chars=500),
     )

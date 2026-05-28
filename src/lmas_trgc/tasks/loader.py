@@ -114,7 +114,7 @@ def load_dataset_tasks(
     local_tasks = load_local_dataset(spec, base_dir)
     if local_tasks:
         return local_tasks
-    if spec.source_type in {"local_jsonl", "synthetic"}:
+    if spec.source_type in {"local_jsonl", "local_jsonl_or_hf_candidates", "synthetic"}:
         return []
     if spec.source_type == "hf":
         return load_hf_dataset_stub(spec, allow_download=allow_download)

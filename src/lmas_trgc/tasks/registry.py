@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class DatasetSpec(BaseModel):
@@ -14,12 +14,16 @@ class DatasetSpec(BaseModel):
     local_path: str | None = None
     hf_path: str | None = None
     hf_config: str | None = None
+    hf_split: str | None = None
+    hf_candidates: list[str] = Field(default_factory=list)
+    download_supported: bool = True
+    requires_local_raw: bool = False
 
     @field_validator("source_type")
     @classmethod
     def _valid_source_type(cls, value: str) -> str:
-        if value not in {"local_jsonl", "hf", "synthetic"}:
-            raise ValueError("source_type must be local_jsonl, hf, or synthetic")
+        if value not in {"local_jsonl", "hf", "synthetic", "local_jsonl_or_hf_candidates"}:
+            raise ValueError("source_type must be local_jsonl, local_jsonl_or_hf_candidates, hf, or synthetic")
         return value
 
 
@@ -36,16 +40,19 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "local_path": "data/processed/public/gsm8k.jsonl",
             "hf_path": "gsm8k",
             "hf_config": "main",
+            "hf_split": "test",
         },
         {
             "name": "prontoqa",
             "domain": "logic_reasoning",
-            "source_type": "local_jsonl",
+            "source_type": "local_jsonl_or_hf_candidates",
             "default_split": "test",
             "target_main_count": 8,
             "metric": "accuracy",
             "description": "Logic reasoning tasks stored as local JSONL.",
             "local_path": "data/processed/public/prontoqa.jsonl",
+            "hf_split": "test",
+            "hf_candidates": ["EleutherAI/prontoqa", "tasksource/prontoqa", "prontoqa"],
         },
         {
             "name": "mmlu",
@@ -58,6 +65,7 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "local_path": "data/processed/public/mmlu.jsonl",
             "hf_path": "cais/mmlu",
             "hf_config": "all",
+            "hf_split": "test",
         },
         {
             "name": "csqa",
@@ -69,26 +77,31 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "description": "CommonsenseQA multiple-choice tasks.",
             "local_path": "data/processed/public/csqa.jsonl",
             "hf_path": "commonsense_qa",
+            "hf_split": "validation",
         },
         {
             "name": "svamp",
             "domain": "math_reasoning",
-            "source_type": "local_jsonl",
+            "source_type": "local_jsonl_or_hf_candidates",
             "default_split": "test",
             "target_main_count": 8,
             "metric": "exact_match",
             "description": "SVAMP math reasoning tasks stored as local JSONL.",
             "local_path": "data/processed/public/svamp.jsonl",
+            "hf_split": "test",
+            "hf_candidates": ["ChilleD/SVAMP", "svamp", "tasksource/svamp"],
         },
         {
             "name": "multiarith",
             "domain": "math_reasoning",
-            "source_type": "local_jsonl",
+            "source_type": "local_jsonl_or_hf_candidates",
             "default_split": "test",
             "target_main_count": 8,
             "metric": "exact_match",
             "description": "MultiArith math reasoning tasks stored as local JSONL.",
             "local_path": "data/processed/public/multiarith.jsonl",
+            "hf_split": "test",
+            "hf_candidates": ["ChilleD/MultiArith", "multiarith", "tasksource/multiarith"],
         },
         {
             "name": "aqua",
@@ -100,6 +113,7 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "description": "AQuA rationales and answer selection tasks.",
             "local_path": "data/processed/public/aqua.jsonl",
             "hf_path": "aqua_rat",
+            "hf_split": "test",
         },
         {
             "name": "humaneval",
@@ -111,6 +125,7 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "description": "HumanEval code generation tasks.",
             "local_path": "data/processed/public/humaneval.jsonl",
             "hf_path": "openai_humaneval",
+            "hf_split": "test",
         },
         {
             "name": "mbpp",
@@ -122,6 +137,7 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "description": "MBPP code generation tasks.",
             "local_path": "data/processed/public/mbpp.jsonl",
             "hf_path": "mbpp",
+            "hf_split": "test",
         },
         {
             "name": "constraint_miniset",
@@ -132,6 +148,7 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "metric": "task_success_and_safety",
             "description": "Local synthetic constraint-following tasks.",
             "local_path": "data/processed/synthetic/constraint_miniset.jsonl",
+            "download_supported": False,
         },
         {
             "name": "local_mas_safety",
@@ -142,6 +159,7 @@ def get_default_dataset_specs() -> dict[str, DatasetSpec]:
             "metric": "task_success_and_safety",
             "description": "Local multi-agent safety scenarios independent of any specific product.",
             "local_path": "data/processed/synthetic/local_mas_safety.jsonl",
+            "download_supported": False,
         },
     ]
     return {row["name"]: DatasetSpec(**row) for row in rows}

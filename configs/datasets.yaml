@@ -10,17 +10,24 @@ datasets:
     local_path: data/processed/public/gsm8k.jsonl
     hf_path: gsm8k
     hf_config: main
+    hf_split: test
+    hf_candidates: []
   prontoqa:
     name: prontoqa
     domain: logic_reasoning
-    source_type: local_jsonl
+    source_type: local_jsonl_or_hf_candidates
     default_split: test
     target_main_count: 8
     metric: accuracy
-    description: Logic reasoning tasks stored as local JSONL.
+    description: Logic reasoning tasks from local JSONL or configured HF candidates.
     local_path: data/processed/public/prontoqa.jsonl
     hf_path:
     hf_config:
+    hf_split: test
+    hf_candidates:
+      - EleutherAI/prontoqa
+      - tasksource/prontoqa
+      - prontoqa
   mmlu:
     name: mmlu
     domain: knowledge_reasoning
@@ -32,6 +39,8 @@ datasets:
     local_path: data/processed/public/mmlu.jsonl
     hf_path: cais/mmlu
     hf_config: all
+    hf_split: test
+    hf_candidates: []
   csqa:
     name: csqa
     domain: commonsense_reasoning
@@ -43,28 +52,40 @@ datasets:
     local_path: data/processed/public/csqa.jsonl
     hf_path: commonsense_qa
     hf_config:
+    hf_split: validation
+    hf_candidates: []
   svamp:
     name: svamp
     domain: math_reasoning
-    source_type: local_jsonl
+    source_type: local_jsonl_or_hf_candidates
     default_split: test
     target_main_count: 8
     metric: exact_match
-    description: SVAMP math reasoning tasks stored as local JSONL.
+    description: SVAMP math reasoning tasks from local JSONL or configured HF candidates.
     local_path: data/processed/public/svamp.jsonl
     hf_path:
     hf_config:
+    hf_split: test
+    hf_candidates:
+      - ChilleD/SVAMP
+      - svamp
+      - tasksource/svamp
   multiarith:
     name: multiarith
     domain: math_reasoning
-    source_type: local_jsonl
+    source_type: local_jsonl_or_hf_candidates
     default_split: test
     target_main_count: 8
     metric: exact_match
-    description: MultiArith math reasoning tasks stored as local JSONL.
+    description: MultiArith math reasoning tasks from local JSONL or configured HF candidates.
     local_path: data/processed/public/multiarith.jsonl
     hf_path:
     hf_config:
+    hf_split: test
+    hf_candidates:
+      - ChilleD/MultiArith
+      - multiarith
+      - tasksource/multiarith
   aqua:
     name: aqua
     domain: math_reasoning
@@ -76,6 +97,8 @@ datasets:
     local_path: data/processed/public/aqua.jsonl
     hf_path: aqua_rat
     hf_config:
+    hf_split: test
+    hf_candidates: []
   humaneval:
     name: humaneval
     domain: code
@@ -87,6 +110,8 @@ datasets:
     local_path: data/processed/public/humaneval.jsonl
     hf_path: openai_humaneval
     hf_config:
+    hf_split: test
+    hf_candidates: []
   mbpp:
     name: mbpp
     domain: code
@@ -98,6 +123,8 @@ datasets:
     local_path: data/processed/public/mbpp.jsonl
     hf_path: mbpp
     hf_config:
+    hf_split: test
+    hf_candidates: []
   constraint_miniset:
     name: constraint_miniset
     domain: constraints
@@ -109,6 +136,8 @@ datasets:
     local_path: data/processed/synthetic/constraint_miniset.jsonl
     hf_path:
     hf_config:
+    hf_split:
+    hf_candidates: []
   local_mas_safety:
     name: local_mas_safety
     domain: local_mas_safety
@@ -120,3 +149,5 @@ datasets:
     local_path: data/processed/synthetic/local_mas_safety.jsonl
     hf_path:
     hf_config:
+    hf_split:
+    hf_candidates: []

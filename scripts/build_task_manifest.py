@@ -14,6 +14,8 @@ from lmas_trgc.tasks.local_synthetic import generate_constraint_miniset, generat
 from lmas_trgc.tasks.manifest import build_task_manifest, save_task_manifest
 from lmas_trgc.tasks.registry import get_default_dataset_specs
 
+PUBLIC_DATASETS = ["gsm8k", "prontoqa", "mmlu", "csqa", "svamp", "multiarith", "aqua", "humaneval", "mbpp"]
+
 
 def _ensure_synthetic_files(synthetic_dir: Path) -> None:
     files = {
@@ -35,6 +37,9 @@ def main() -> int:
     parser.add_argument("--create-synthetic-if-missing", dest="create_synthetic_if_missing", action="store_true", default=True)
     parser.add_argument("--no-create-synthetic-if-missing", dest="create_synthetic_if_missing", action="store_false")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--require-full", action="store_true")
+    parser.add_argument("--expected-count", type=int, default=104)
+    parser.add_argument("--fail-on-missing-public", action="store_true")
     args = parser.parse_args()
 
     specs = get_default_dataset_specs()
@@ -54,11 +59,26 @@ def main() -> int:
     )
     save_task_manifest(manifest, Path(args.output))
 
+    expected_counts = {name: spec.target_main_count for name, spec in specs.items()}
+    count_mismatches = {
+        name: {"expected": expected, "actual": manifest.dataset_counts.get(name, 0)}
+        for name, expected in expected_counts.items()
+        if manifest.dataset_counts.get(name, 0) != expected
+    }
+    missing_public = [name for name in PUBLIC_DATASETS if name in manifest.missing_datasets]
+    is_full_manifest = (
+        manifest.total_tasks == args.expected_count
+        and not manifest.missing_datasets
+        and not count_mismatches
+    )
+
     summary = {
         "manifest_id": manifest.manifest_id,
         "total_tasks": manifest.total_tasks,
         "dataset_counts": manifest.dataset_counts,
         "missing_datasets": manifest.missing_datasets,
+        "count_mismatches": count_mismatches,
+        "is_full_manifest": is_full_manifest,
         "output": args.output,
     }
     if args.json:
@@ -68,7 +88,12 @@ def main() -> int:
         print(f"total_tasks: {manifest.total_tasks}")
         print(f"dataset_counts: {manifest.dataset_counts}")
         print(f"missing_datasets: {manifest.missing_datasets}")
+        print(f"is_full_manifest: {is_full_manifest}")
         print(f"output: {args.output}")
+    if args.require_full and not is_full_manifest:
+        return 2
+    if args.fail_on_missing_public and missing_public:
+        return 2
     return 0
 
 

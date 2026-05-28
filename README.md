@@ -266,7 +266,19 @@ The main experiment uses 11 data sources:
 - Public datasets: GSM8K, ProntoQA, MMLU, CSQA, SVAMP, MultiArith, AQuA, HumanEval, MBPP.
 - Synthetic local datasets: Constraint MiniSet and Local-MAS Safety Set.
 
-Step 3 does not automatically download public datasets. Public data may be added later as local JSONL files under `data/processed/public/`, but `data/raw/`, `data/processed/`, and `data/manifests/` must not be committed to Git.
+The complete main manifest requires 104 tasks: 8 from each public dataset and 16 from each synthetic dataset. Public datasets can be prepared either by explicit HuggingFace download or by importing local raw JSON/JSONL files. `data/raw/`, `data/processed/`, and `data/manifests/` must not be committed to Git.
+
+Prepare all supported public datasets with explicit download enabled:
+
+```bash
+conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset all --allow-download --overwrite --json
+```
+
+Import local raw public datasets from a directory:
+
+```bash
+conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset all --input-dir data/raw/public --overwrite --json
+```
 
 Prepare a single public dataset from a local raw JSON/JSONL file:
 
@@ -274,19 +286,7 @@ Prepare a single public dataset from a local raw JSON/JSONL file:
 conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset gsm8k --input-path /path/to/gsm8k.jsonl --overwrite
 ```
 
-Batch import public datasets from a local directory:
-
-```bash
-conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset all --input-dir /path/to/raw_public --overwrite
-```
-
-Explicitly allow HuggingFace download for supported HF datasets:
-
-```bash
-conda run -n lmas-trgc python scripts/prepare_public_datasets.py --dataset gsm8k --allow-download --overwrite
-```
-
-Downloads are disabled by default. `prontoqa`, `svamp`, and `multiarith` are treated as `local_jsonl` sources by default and are not automatically downloaded from HuggingFace. Standardized public outputs are written under `data/processed/public/`, which must not be committed.
+Downloads are disabled by default. `gsm8k`, `mmlu`, `csqa`, `aqua`, `humaneval`, and `mbpp` use configured HuggingFace sources when `--allow-download` is supplied. `prontoqa`, `svamp`, and `multiarith` first look for local raw files under `data/raw/public/` and then try configured HuggingFace candidates. If a public dataset cannot be downloaded or imported, it remains missing or failed; synthetic data is never used as a substitute for public data. Standardized public outputs are written under `data/processed/public/`, which must not be committed.
 
 The synthetic datasets can be generated locally:
 
@@ -294,21 +294,27 @@ The synthetic datasets can be generated locally:
 conda run -n lmas-trgc python scripts/create_synthetic_tasks.py --overwrite
 ```
 
-The main task manifest can be built with:
+Audit dataset readiness:
 
 ```bash
-conda run -n lmas-trgc python scripts/build_task_manifest.py
+conda run -n lmas-trgc python scripts/audit_dataset_readiness.py --json
 ```
 
-The final main experiment target is 104 tasks: 8 from each of the 9 public datasets, 16 from Constraint MiniSet, and 16 from Local-MAS Safety Set. When public datasets are not present locally, the manifest builder records them as missing and still creates a synthetic-only manifest for local smoke testing. Local-MAS Safety Set describes generic local multi-agent system scenarios and is not bound to any specific local agent product.
-
-After public data preparation, rebuild the manifest:
+Freeze the full main manifest:
 
 ```bash
-conda run -n lmas-trgc python scripts/build_task_manifest.py
+conda run -n lmas-trgc python scripts/build_task_manifest.py --require-full --output data/manifests/main_manifest.json --json
 ```
 
-If all public and synthetic datasets are present, the manifest should reach 104 tasks.
+The final main experiment target is 104 tasks: 8 from each of the 9 public datasets, 16 from Constraint MiniSet, and 16 from Local-MAS Safety Set. When public datasets are not present locally, the manifest builder records them as missing and can still create a synthetic-only manifest for engineering smoke tests. `--require-full` enforces the complete 104-task requirement and fails if any dataset is missing or short. Local-MAS Safety Set describes generic local multi-agent system scenarios and is not bound to any specific local agent product.
+
+If automatic public download fails, place raw files at:
+
+```bash
+data/raw/public/<dataset>.jsonl
+```
+
+Step 11 readiness status: synthetic datasets are ready with 32 total tasks, but the public datasets were not available from the local raw directory or HuggingFace/cache in the latest preparation attempt. The full 104-task main manifest has therefore not been frozen yet.
 
 ## Step 1 Status
 
@@ -391,6 +397,12 @@ Step 10A adds:
 - Safe dry-run and config-only checks that do not call external APIs.
 - Successful real DeepSeek + SV client smoke validation for the bounded `graph/message_poisoning/trgc/max_steps=2` path.
 
+Step 11 adds:
+
+- Dataset readiness auditing for all 11 dataset sources.
+- Explicit public dataset download/import reporting with missing and failed dataset states.
+- Strict `--require-full` manifest freezing for the 104-task main pool.
+
 ## Later Development
 
-Later stages will add heterogeneous M1-M4 real model execution, local SV client smoke, dataset-backed pilot execution, G-Safeguard adapter integration, main matrix execution, tables, and figures.
+Later stages will add heterogeneous M1-M4 real model execution, dataset-backed pilot execution after the 104-task manifest is frozen, G-Safeguard adapter integration, main matrix execution, tables, and figures.
