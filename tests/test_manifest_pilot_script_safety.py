@@ -10,6 +10,9 @@ def test_stage_c_manifest_pilot_dry_run_is_safe():
         sys.executable,
         str(repo_root / "scripts" / "run_stage_c_deepseek_manifest_pilot.py"),
         "--dry-run",
+        "--max-workers",
+        "2",
+        "--no-progress",
         "--json",
     ]
     completed = subprocess.run(cmd, cwd=repo_root, text=True, capture_output=True, check=False)
@@ -18,6 +21,8 @@ def test_stage_c_manifest_pilot_dry_run_is_safe():
     assert payload["did_call_real_llm"] is False
     assert payload["selected_tasks"] == 11
     assert "prontoqa" in payload["selected_datasets"]
+    assert payload["max_workers"] == 2
+    assert payload["show_progress"] is False
 
 
 def test_stage_c_manifest_pilot_refuses_without_confirm():
@@ -25,12 +30,17 @@ def test_stage_c_manifest_pilot_refuses_without_confirm():
     cmd = [
         sys.executable,
         str(repo_root / "scripts" / "run_stage_c_deepseek_manifest_pilot.py"),
+        "--max-workers",
+        "2",
+        "--no-progress",
         "--json",
     ]
     completed = subprocess.run(cmd, cwd=repo_root, text=True, capture_output=True, check=False)
     assert completed.returncode == 2
     payload = json.loads(completed.stdout)
     assert payload["did_call_real_llm"] is False
+    assert payload["max_workers"] == 2
+    assert payload["show_progress"] is False
     assert "Refusing to run real DeepSeek manifest pilot" in payload["message"]
 
 

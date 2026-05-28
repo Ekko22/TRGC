@@ -17,6 +17,8 @@ def test_stage_c_manifest_pilot_config_defaults():
     assert config.max_steps == 3
     assert config.sv_mode == "client"
     assert not config.confirm_real_llm
+    assert config.max_workers == 1
+    assert config.show_progress is True
 
 
 def test_runner_refuses_without_confirm_real_llm():
@@ -35,6 +37,8 @@ def test_runner_refuses_without_confirm_real_llm():
 def test_stage_c_manifest_pilot_config_rejects_bad_values():
     with pytest.raises(ValueError):
         StageCDeepSeekManifestPilotConfig(batch_id="batch_test", max_steps=0)
+    with pytest.raises(ValueError):
+        StageCDeepSeekManifestPilotConfig(batch_id="batch_test", max_workers=0)
     with pytest.raises(ValueError):
         StageCDeepSeekManifestPilotConfig(batch_id="batch_test", topologies=["bad"])
     with pytest.raises(ValueError):

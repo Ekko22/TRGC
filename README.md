@@ -172,6 +172,10 @@ Step 8 adds a manifest-backed Stage-B batch runner, batch artifact index, and ag
 
 The default batch is synthetic and mock-only. It does not call real LLMs, `/chat/completions`, `/models`, or external services. Batch outputs are written under `results/runs/stage_b_batches/<batch_id>/`, while each individual run artifact remains under `results/runs/stage_b/<run_id>/`. Both paths must stay out of Git.
 
+Batch and pilot runners support run-level parallelism with `--max-workers`. A single run's 7-agent protocol is still strictly serial: agent steps, message propagation, attack injection, TRGC gates, and final context accumulation are not parallelized inside `SingleRunExecutor`. Only independent runs are scheduled concurrently.
+
+The tqdm progress bar is enabled by default and writes to stderr, so `--json` keeps stdout as clean JSON. Use `--no-progress` to disable it. Stage-B mock batches can use higher worker counts such as 4 or 8. Real Stage-C DeepSeek pilots should start with `--max-workers 2` to reduce API rate-limit pressure.
+
 Dry-run the default batch:
 
 ```bash
@@ -188,6 +192,18 @@ Run a wider Stage-B matrix:
 
 ```bash
 conda run -n lmas-trgc python scripts/run_stage_b_batch.py --datasets local_mas_safety,constraint_miniset --task-limit-per-dataset 2 --topologies star,chain,graph,tree --attacks message_poisoning,role_impersonation,relay_injection --defenses no_defense,trgc --json
+```
+
+Run a Stage-B mock batch in parallel:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_batch.py --max-workers 4 --json
+```
+
+Disable the progress bar:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_b_batch.py --max-workers 4 --no-progress --json
 ```
 
 Aggregate an existing batch:
@@ -289,6 +305,12 @@ Default real pilot:
 
 ```bash
 conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --confirm-real-llm --overwrite --json
+```
+
+Parallel real pilot with the recommended low worker count:
+
+```bash
+conda run -n lmas-trgc python scripts/run_stage_c_deepseek_manifest_pilot.py --confirm-real-llm --max-workers 2 --overwrite --json
 ```
 
 Optional mock SV fallback:

@@ -11,6 +11,9 @@ def test_stage_b_batch_script_default(tmp_path):
         str(repo_root / "scripts" / "run_stage_b_batch.py"),
         "--output-root",
         str(tmp_path),
+        "--max-workers",
+        "2",
+        "--no-progress",
         "--json",
     ]
     completed = subprocess.run(cmd, cwd=repo_root, text=True, capture_output=True, check=False)
@@ -19,6 +22,8 @@ def test_stage_b_batch_script_default(tmp_path):
     assert payload["total_runs"] == 8
     assert payload["successful_runs"] == 8
     assert payload["failed_runs"] == 0
+    assert payload["max_workers"] == 2
+    assert payload["show_progress"] is False
     assert Path(payload["batch_dir"]).exists()
     assert Path(payload["run_index_path"]).exists()
     assert Path(payload["aggregate_metrics_path"]).exists()

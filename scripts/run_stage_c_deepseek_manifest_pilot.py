@@ -67,6 +67,9 @@ def _summary_from_config(
         "max_steps": args.max_steps,
         "sv_mode": args.sv_mode,
         "judge_mode": args.judge_mode,
+        "max_workers": args.max_workers,
+        "show_progress": not args.no_progress,
+        "fail_fast": args.fail_fast,
         "task_agent_model_slot": "M1",
         "task_agent_model_name": registry.get_task_model("M1").model_name,
         "agents": [f"A{idx}" for idx in range(1, 8)],
@@ -94,6 +97,9 @@ def main() -> int:
     parser.add_argument("--judge-mode", choices=["rule_based", "mock_protocol"], default="rule_based")
     parser.add_argument("--output-root", default="results/runs")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--max-workers", type=int, default=2)
+    parser.add_argument("--no-progress", action="store_true")
+    parser.add_argument("--fail-fast", action="store_true")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--models-config", default="configs/models.example.yaml")
     args = parser.parse_args()
@@ -101,6 +107,11 @@ def main() -> int:
         args.batch_id = _default_batch_id(args)
 
     try:
+        if args.max_workers < 1:
+            raise ValueError("--max-workers must be >= 1")
+        high_workers_warning = "High max-workers may trigger API rate limits."
+        if args.max_workers > 4 and (args.dry_run or args.check_config_only or not args.confirm_real_llm):
+            print(high_workers_warning, file=sys.stderr)
         load_dotenv_if_exists()
         registry = build_model_registry(Path(args.models_config), require_keys=False)
         missing = check_deepseek_configuration(registry, require_sv=False)
@@ -133,6 +144,8 @@ def main() -> int:
                 "ok": False,
                 "message": "Refusing to run real DeepSeek manifest pilot without --confirm-real-llm",
                 "did_call_real_llm": False,
+                "max_workers": args.max_workers,
+                "show_progress": not args.no_progress,
             }
             print(json.dumps(output, ensure_ascii=False, indent=2) if args.json else output)
             return 2
@@ -152,6 +165,9 @@ def main() -> int:
             output_root=args.output_root,
             overwrite=args.overwrite,
             confirm_real_llm=args.confirm_real_llm,
+            max_workers=args.max_workers,
+            show_progress=not args.no_progress,
+            fail_fast=args.fail_fast,
         )
         topology_manager = TopologyManager()
         runner = StageCDeepSeekManifestPilotRunner(
@@ -165,6 +181,8 @@ def main() -> int:
         result = runner.run_pilot(config)
         output = result.model_dump(mode="json")
         output["did_call_real_llm"] = True
+        output["max_workers"] = args.max_workers
+        output["show_progress"] = not args.no_progress
         print(json.dumps(output, ensure_ascii=False, indent=2) if args.json else output)
         return 0 if result.completed else 2
     except Exception as exc:

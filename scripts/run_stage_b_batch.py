@@ -37,13 +37,15 @@ def _default_batch_id(args: argparse.Namespace) -> str:
     )
 
 
-def _summary(result) -> dict:
+def _summary(result, args: argparse.Namespace) -> dict:
     return {
         "batch_id": result.batch_id,
         "completed": result.completed,
         "total_runs": result.total_runs,
         "successful_runs": result.successful_runs,
         "failed_runs": result.failed_runs,
+        "max_workers": args.max_workers,
+        "show_progress": not args.no_progress,
         "batch_dir": result.batch_dir,
         "run_index_path": result.run_index_path,
         "aggregate_metrics_path": result.aggregate_metrics_path,
@@ -65,6 +67,9 @@ def main() -> int:
     parser.add_argument("--output-root", default="results/runs")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--max-steps", type=int)
+    parser.add_argument("--max-workers", type=int, default=1)
+    parser.add_argument("--no-progress", action="store_true")
+    parser.add_argument("--fail-fast", action="store_true")
     parser.add_argument("--judge-mode", choices=["mock_protocol", "rule_based"], default="mock_protocol")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -75,6 +80,8 @@ def main() -> int:
         topologies = _split_csv(args.topologies)
         attacks = _split_csv(args.attacks)
         defenses = _split_csv(args.defenses)
+        if args.max_workers < 1:
+            raise ValueError("--max-workers must be >= 1")
         batch_id = args.batch_id or _default_batch_id(args)
 
         resolver_config = TaskResolverConfig(
@@ -97,6 +104,9 @@ def main() -> int:
                 "attacks": attacks,
                 "defenses": defenses,
                 "judge_mode": args.judge_mode,
+                "max_workers": args.max_workers,
+                "show_progress": not args.no_progress,
+                "fail_fast": args.fail_fast,
             }
             print(json.dumps(output, ensure_ascii=False, indent=2) if args.json else output)
             return 0
@@ -125,9 +135,12 @@ def main() -> int:
                 max_steps=args.max_steps,
                 use_mock_llm=True,
                 judge_mode=args.judge_mode,
+                max_workers=args.max_workers,
+                show_progress=not args.no_progress,
+                fail_fast=args.fail_fast,
             ),
         )
-        output = _summary(result)
+        output = _summary(result, args)
         print(json.dumps(output, ensure_ascii=False, indent=2) if args.json else output)
         return 0 if result.failed_runs == 0 else 2
     except Exception as exc:
